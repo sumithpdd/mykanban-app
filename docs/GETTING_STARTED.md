@@ -109,6 +109,138 @@ openssl rand -base64 32
 
 This generates a cryptographically secure random string that NextAuth.js uses to encrypt session tokens and other sensitive data.
 
+## Redux Store Configuration
+
+### Why Redux Toolkit?
+
+Redux Toolkit provides several advantages for state management:
+
+- **Predictable State Updates**: Centralized state management with clear data flow
+- **Developer Tools**: Time-travel debugging and state inspection
+- **Performance**: Optimized re-renders with selectors
+- **TypeScript Support**: Full type safety for state and actions
+- **RTK Query**: Built-in data fetching and caching capabilities
+- **Boilerplate Reduction**: Less code compared to traditional Redux
+
+### Step-by-Step Setup
+
+1. **Install Required Packages**:
+   ```bash
+   npm install @reduxjs/toolkit react-redux
+   ```
+
+2. **Create Redux Store Structure**:
+   ```
+   src/redux/
+   ├── store.ts
+   ├── hooks.ts
+   └── provider.tsx
+   ```
+
+3. **Set up the Store** (`src/redux/store.ts`):
+   ```typescript
+   import { configureStore } from "@reduxjs/toolkit";
+   import { setupListeners } from "@reduxjs/toolkit/query/react";
+
+   // Create the Redux store
+   export const store = configureStore({
+     reducer: {}, // Add your reducers here
+   });
+
+   // Setup listeners for refetch behaviors
+   setupListeners(store.dispatch);
+
+   // Define RootState and AppDispatch types
+   export type RootState = ReturnType<typeof store.getState>;
+   export type AppDispatch = typeof store.dispatch;
+   ```
+
+4. **Create Typed Hooks** (`src/redux/hooks.ts`):
+   ```typescript
+   import { TypedUseSelectorHook, useDispatch, useSelector } from "react-redux";
+   import type { RootState, AppDispatch } from "./store";
+
+   // Typed versions of useDispatch and useSelector hooks
+   export const useAppDispatch = () => useDispatch<AppDispatch>();
+   export const useAppSelector: TypedUseSelectorHook<RootState> = useSelector;
+   ```
+
+5. **Create Provider Component** (`src/redux/provider.tsx`):
+   ```typescript
+   'use client'
+   import { store } from "./store";
+   import { Provider } from "react-redux";
+
+   // Custom provider component
+   export function Providers({ children }: { children: React.ReactNode }) {
+     return <Provider store={store}>{children}</Provider>;
+   }
+   ```
+
+   **Understanding `'use client'` Directive:**
+   
+   The `'use client'` directive tells Next.js that this component should run on the client side. Here's why it's needed:
+   
+   - **Server-Side Rendering (SSR)**: Next.js renders components on the server by default
+   - **Redux Store**: Redux state management requires browser APIs and client-side JavaScript
+   - **React Context**: The Provider component needs to run in the browser to manage state
+   - **Hydration**: Ensures the Redux store is properly initialized on the client
+   
+   Without `'use client'`, you'd get errors like "useContext can only be called inside a client component."
+
+6. **Update Layout** (`src/app/layout.tsx`):
+   ```typescript
+   import type { Metadata } from 'next'
+   import { Plus_Jakarta_Sans } from "next/font/google";
+   import './globals.css'
+   import { Providers } from "@/redux/provider";
+
+   // Font we'll use throughout the project
+   const pjs = Plus_Jakarta_Sans({ subsets: ["latin"], display: "swap" });
+
+   // Metadata definition
+   export const metadata: Metadata = {
+     title: 'My Kanban Task Management App',
+     description: 'A full-stack Kanban task management application',
+   }
+
+   // RootLayout component
+   export default function RootLayout({
+     children,
+   }: {
+     children: React.ReactNode
+   }) {
+     return (
+       <html lang="en" className={pjs.className}>
+         <body>
+           <Providers>
+             {children}
+           </Providers>
+         </body>
+       </html>
+     );
+   }
+   ```
+
+7. **Update TypeScript Configuration** (`tsconfig.json`):
+   ```json
+   {
+     "compilerOptions": {
+       "paths": {
+         "@/*": ["./src/*"]
+       }
+     }
+   }
+   ```
+
+### Key Benefits of This Setup
+
+- **Type Safety**: Full TypeScript support for all Redux operations
+- **Performance**: Optimized re-renders and state updates
+- **Developer Experience**: Redux DevTools integration for debugging
+- **Scalability**: Easy to add new slices and reducers as the app grows
+- **Data Fetching**: RTK Query ready for API integration
+
 ## Project Structure
 
 ```
@@ -124,6 +256,10 @@ mykanban-app/
 │   │   └── page.tsx              # Home page
 │   ├── components/               # React components
 │   ├── lib/                      # Utility functions
+│   ├── redux/                    # Redux store configuration
+│   │   ├── store.ts              # Redux store setup
+│   │   ├── hooks.ts              # Typed Redux hooks
+│   │   └── provider.tsx          # Redux provider component
 │   └── middleware.ts             # NextAuth middleware
 ├── .env.local                    # Environment variables (create this)
 ├── .gitignore                    # Git ignore rules

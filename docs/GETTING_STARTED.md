@@ -241,6 +241,267 @@ Redux Toolkit provides several advantages for state management:
 - **Scalability**: Easy to add new slices and reducers as the app grows
 - **Data Fetching**: RTK Query ready for API integration
 
+## UI Components Implementation
+
+### Building the Core UI Components
+
+Now that Redux is configured, let's build the essential UI components for our Kanban application. We'll create a navbar, sidebar, and board components to form the foundation of our interface.
+
+### 1. Creating the Navbar Component
+
+**Step 1**: Create the components folder structure:
+```
+src/app/components/
+├── Navbar.tsx
+├── Dropdown.tsx
+├── Sidebar.tsx
+└── BoardTasks.tsx
+```
+
+**Step 2**: Create the Navbar component (`src/app/components/Navbar.tsx`):
+```typescript
+'use client' // Client component for state management
+
+import Dropdown from "./Dropdown";
+import { useState } from 'react'
+
+export default function Navbar() {
+  const [show, setShow] = useState<boolean>(false); // Manage dropdown state
+
+  return (
+    <nav className="bg-white border flex h-24">
+      <div className="flex-none w-[18.75rem] border-r-2 flex items-center pl-[2.12rem]">
+        <p className="font-bold text-3xl">Kanban App</p>
+      </div>
+
+      <div className="flex justify-between w-full items-center pr-[2.12rem]">
+        <p className="text-black text-2xl font-bold pl-6">Current board name</p>
+
+        <div className="flex items-center space-x-3">
+          <button className="bg-blue-500 text-black px-4 py-2 flex rounded-3xl items-center space-x-2">
+            <p>+ Add New Task</p>
+          </button>
+          <div className="relative flex items-center">
+            <button 
+              onClick={() => setShow(!show)} // Toggle dropdown
+              className="text-3xl mb-4">...</button>
+            <Dropdown show={show}/> {/* Render dropdown with state */}
+          </div>
+        </div>
+      </div>
+    </nav>
+  )
+}
+```
+
+**Key Features**:
+- **Responsive Design**: Fixed height with flexible width
+- **State Management**: Uses `useState` for dropdown toggle
+- **Interactive Elements**: Add task button and dropdown trigger
+- **Client Component**: Required for state management with `'use client'`
+
+### 2. Creating the Dropdown Component
+
+Create the Dropdown component (`src/app/components/Dropdown.tsx`):
+```typescript
+interface IDropdown {
+  show: boolean
+}
+
+export default function Dropdown({ show }: IDropdown) {
+  return (
+    <div
+      className={`${
+        show ? "block" : "hidden"
+      } w-48 absolute top-full bg-white
+       border shadow-lg right-0 py-2 rounded-2xl`}
+    >
+      <div className="hover:bg-gray-300">
+        <button className="text-sm px-4 py-2">Edit Board</button>
+      </div>
+      <div className="hover:bg-gray-300">
+        <button className="text-sm px-4 py-2">
+          Delete Board
+        </button>
+      </div>
+    </div>
+  )
+}
+```
+
+**Features**:
+- **Conditional Rendering**: Shows/hides based on `show` prop
+- **Positioning**: Absolute positioning relative to parent
+- **Hover Effects**: Interactive feedback for better UX
+- **TypeScript Interface**: Type-safe props definition
+
+### 3. Creating the Sidebar Component
+
+Create the Sidebar component (`src/app/components/Sidebar.tsx`):
+```typescript
+export default function Sidebar() {
+  return (
+    <aside className="w-[18.75rem] flex-none dark:bg-dark-grey h-full py-6 pr-6">
+      <p className="text-medium-grey pl-[2.12rem] text-[.95rem] font-semibold uppercase pb-3">
+        {`All Boards (0)`}
+      </p>
+      <div className="cursor-pointer flex items-center rounded-tr-full rounded-br-full bg-blue-500 space-x-2 pl-[2.12rem] py-3 pb-3">
+        <p className="text-white text-lg capitalize">Current board name</p>
+      </div>
+      <button className="flex items-center space-x-2 pl-[2.12rem] py-3">
+        <p className="text-base font-bold capitalize text-main-purple">
+          + Create New Board
+        </p>
+      </button>
+    </aside>
+  );
+}
+```
+
+**Features**:
+- **Fixed Width**: Consistent sidebar width across all screens
+- **Board List**: Displays available boards with count
+- **Active Board**: Highlights currently selected board
+- **Create Button**: Easy access to board creation
+
+### 4. Creating the Board Tasks Component
+
+Create the BoardTasks component (`src/app/components/BoardTasks.tsx`):
+```typescript
+export default function BoardTasks() {
+  return (
+    <div className="overflow-x-auto overflow-y-auto w-full bg-stone-200">
+      <div className="w-full h-full flex justify-center items-center">
+        <div className="flex flex-col items-center">
+          <p className="text-black text-sm">
+            This board is empty. Create a new column to get started.
+          </p>
+          <button className="bg-blue-500 text-black px-4 py-2 flex mt-6 rounded-3xl items-center space-x-2">
+            <p>+ Add New Column</p>
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+```
+
+**Features**:
+- **Scrollable Area**: Handles overflow with scroll bars
+- **Empty State**: User-friendly message when no tasks exist
+- **Call-to-Action**: Prominent button to add first column
+- **Responsive Layout**: Adapts to different screen sizes
+
+### 5. Updating the Layout and Page Components
+
+**Update Layout** (`src/app/layout.tsx`):
+```typescript
+import type { Metadata } from 'next'
+import { Providers } from "@/redux/provider";
+import Navbar from './components/Navbar';
+import { Plus_Jakarta_Sans } from "next/font/google";
+import './globals.css'
+
+const pjs = Plus_Jakarta_Sans({ subsets: ["latin"], display: "swap" });
+
+export const metadata: Metadata = {
+  title: 'My Kanban Task Management App',
+  description: 'A full-stack Kanban task management application',
+}
+
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode
+}) {
+  return (
+    <html lang="en" className={pjs.className}>
+      <body className='pb-24 h-screen overflow-hidden'>
+        <Providers>
+          <Navbar />
+          {children}
+        </Providers>
+      </body>
+    </html>
+  );
+}
+```
+
+**Update Home Page** (`src/app/page.tsx`):
+```typescript
+import Sidebar from "./components/Sidebar";
+import BoardTasks from "./components/BoardTasks";
+
+export default function Home() {
+  return (
+    <main className="flex h-full">
+      <Sidebar />
+      <BoardTasks />
+    </main>
+  );
+}
+```
+
+### 6. Understanding the Component Architecture
+
+**Layout Hierarchy**:
+```
+RootLayout
+├── Providers (Redux)
+├── Navbar (Global)
+└── Page Content
+    ├── Sidebar
+    └── BoardTasks
+```
+
+**Key Design Decisions**:
+
+1. **Client vs Server Components**:
+   - **Navbar**: `'use client'` for state management
+   - **Other Components**: Server components for better performance
+   - **Layout**: Server component with client providers
+
+2. **Styling Approach**:
+   - **Tailwind CSS**: Utility-first styling
+   - **Responsive Design**: Mobile-first approach
+   - **Consistent Spacing**: Using Tailwind's spacing scale
+
+3. **State Management**:
+   - **Local State**: `useState` for component-specific state
+   - **Global State**: Redux for application-wide state
+   - **Props**: Type-safe component communication
+
+### 7. Component Features Overview
+
+**Navbar Features**:
+- ✅ App branding and title
+- ✅ Current board name display
+- ✅ Add new task button
+- ✅ Board options dropdown
+- ✅ Responsive design
+
+**Sidebar Features**:
+- ✅ Board count display
+- ✅ Active board highlighting
+- ✅ Create new board button
+- ✅ Fixed width layout
+
+**Board Area Features**:
+- ✅ Empty state messaging
+- ✅ Add new column button
+- ✅ Scrollable content area
+- ✅ Responsive layout
+
+### 8. Next Steps
+
+With the UI components in place, you're ready to:
+
+1. **Add Data Management**: Connect components to Redux store
+2. **Implement Modals**: Create task and board creation modals
+3. **Add Drag & Drop**: Implement task movement between columns
+4. **Connect to Firebase**: Add real-time data synchronization
+5. **Enhance Styling**: Add animations and improved visual design
+
 ## Project Structure
 
 ```
@@ -251,10 +512,14 @@ mykanban-app/
 ├── src/
 │   ├── app/                      # Next.js App Router
 │   │   ├── api/auth/[...nextauth]/ # Authentication API routes
+│   │   ├── components/           # UI Components
+│   │   │   ├── Navbar.tsx        # Navigation bar
+│   │   │   ├── Dropdown.tsx      # Board options dropdown
+│   │   │   ├── Sidebar.tsx       # Board navigation sidebar
+│   │   │   └── BoardTasks.tsx    # Main board content area
 │   │   ├── globals.css           # Global styles
 │   │   ├── layout.tsx            # Root layout
 │   │   └── page.tsx              # Home page
-│   ├── components/               # React components
 │   ├── lib/                      # Utility functions
 │   ├── redux/                    # Redux store configuration
 │   │   ├── store.ts              # Redux store setup

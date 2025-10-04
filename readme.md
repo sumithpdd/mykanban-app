@@ -6,6 +6,11 @@ A full-stack Kanban task management application built with modern web technologi
 
 - **[Project Brief](docs/PROJECT_BRIEF.md)** - Project overview, goals, and roadmap
 - **[Getting Started](docs/GETTING_STARTED.md)** - Quick setup and installation guide
+- **[Authentication Setup](docs/AUTHENTICATION.md)** - Google OAuth with NextAuth.js
+- **[Redux Store Configuration](docs/REDUX_SETUP.md)** - State management with RTK Query
+- **[UI Components Implementation](docs/UI_COMPONENTS.md)** - Building the interface
+- **[Firebase Firestore Integration](docs/FIREBASE_SETUP.md)** - Database setup and configuration
+- **[CRUD Operations Implementation](docs/CRUD_OPERATIONS.md)** - Complete functionality guide
 
 ## 🚀 Quick Start
 
@@ -20,9 +25,11 @@ A full-stack Kanban task management application built with modern web technologi
    ```env
    GOOGLE_CLIENT_ID=your_google_client_id_here
    GOOGLE_CLIENT_SECRET=your_google_client_secret_here
-   NEXTAUTH_SECRET=your_nextauth_secret
+   NEXTAUTH_SECRET=your_generated_nextauth_secret
    NEXTAUTH_URL=http://localhost:3000
    ```
+   
+   **Generate NextAuth Secret**: Run `node generate-secret.js` to generate a secure secret
 
 3. **Run the development server**:
    ```bash
@@ -109,19 +116,14 @@ src/
 
 ## 📖 Development Guide
 
-For detailed development instructions, including:
+For detailed development instructions, see our comprehensive documentation:
 
-- Setting up Google OAuth credentials
-- Configuring Redux store with RTK Query
-- Building interactive UI components
-- Implementing complete CRUD operations
-- Creating dynamic modal systems
-- Firebase Firestore integration
-- Form validation and error handling
-- State management patterns
-- Testing and deployment
-
-See the comprehensive development steps in the [Getting Started Guide](docs/GETTING_STARTED.md).
+- **[Authentication Setup](docs/AUTHENTICATION.md)** - Google OAuth credentials and NextAuth.js configuration
+- **[Redux Store Configuration](docs/REDUX_SETUP.md)** - State management with RTK Query setup
+- **[UI Components Implementation](docs/UI_COMPONENTS.md)** - Building interactive components and modal systems
+- **[Firebase Firestore Integration](docs/FIREBASE_SETUP.md)** - Database setup and real-time synchronization
+- **[CRUD Operations Implementation](docs/CRUD_OPERATIONS.md)** - Complete functionality implementation
+- **[Getting Started Guide](docs/GETTING_STARTED.md)** - Step-by-step setup and installation
 
 ## 🚀 Current Status
 

@@ -502,6 +502,100 @@ With the UI components in place, you're ready to:
 4. **Connect to Firebase**: Add real-time data synchronization
 5. **Enhance Styling**: Add animations and improved visual design
 
+## Firebase Firestore Integration
+
+### Setting Up Firebase Firestore
+
+To integrate Firestore into your application, you'll need to create a Firebase project using the Firebase console. You can name the project according to your preference, but for this tutorial, we'll use "Kanban-app-tutorial."
+
+**Step-by-Step Setup:**
+
+1. **Create Firebase Project**:
+   - Go to [Firebase Console](https://console.firebase.google.com/)
+   - Click "Create a project" or "Add project"
+   - Enter your project name (e.g., "Kanban-app-tutorial")
+   - Follow the setup wizard to create the project
+
+2. **Register Your App**:
+   - Once the project is created, you'll be prompted to register your app
+   - Choose "Web" as the platform
+   - Enter your app nickname
+   - Copy the Firebase configuration object
+
+3. **Install Firebase Package**:
+   ```bash
+   npm install firebase
+   ```
+
+4. **Configure Firebase**:
+   - Create a `utils` folder in your `src/app` directory
+   - Create `firebaseConfig.ts` file inside the utils folder
+   - Paste your Firebase configuration into the file
+   - The configuration will initialize Firebase and export the Firestore database instance
+
+5. **Set Up Firestore Database**:
+   - Navigate to your Firebase project console
+   - Go to "Firestore Database" in the left sidebar
+   - Click "Create database"
+   - Choose "Start in test mode" for development
+   - Select your preferred location for the database
+
+6. **Configure Firestore Rules**:
+   - Go to the "Rules" tab in Firestore Database
+   - Modify the read and write rules from `false` to `true`
+   - This enables anyone to add data to the database without restrictions
+   - **Note**: This is not recommended for production - we're implementing it this way for development purposes only
+
+### Adding Initial Data to Firestore
+
+**Goal**: Ensure users aren't greeted with an empty board when they complete authentication. Instead, present them with dummy task data they can interact with, allowing them to explore the application's features.
+
+**Approach**: Make this data user-specific, forming the foundation for each user to build upon by creating new boards and tasks.
+
+**Implementation Strategy**:
+
+1. **Check if User is New**:
+   - Determine whether the user is signing in for the first time
+   - This allows us to automatically create a new document for the user in the database
+
+2. **Create New User Document**:
+   - If the user is new, create a new data entry in the database specifically for that user
+   - Use the user's email as a unique identifier
+
+**Data Structure**:
+- Create a `data.js` file in the utils folder containing dummy data for a board
+- The data includes boards with columns and tasks
+- Each item has a unique ID generated using a utility function
+
+**Integration Process**:
+- Modify the main page component to handle user session management
+- Import necessary Firestore methods for document operations
+- Implement functions to:
+  - Get user session details
+  - Check if user document exists in database
+  - Add new document with initial data for new users
+- Use React hooks (`useEffect`, `useState`) to manage the data flow
+
+**Key Features**:
+- **User-Specific Data**: Each user gets their own document in the database
+- **Automatic Initialization**: New users automatically receive dummy data
+- **Session Management**: Integration with NextAuth.js for user authentication
+- **Error Handling**: Proper error handling for database operations
+
+**Database Structure**:
+```
+users/
+  └── {user-email}/
+      └── tasks/
+          └── {document-with-board-data}
+```
+
+**Benefits**:
+- **Immediate Engagement**: Users can interact with the app right away
+- **Learning Experience**: Users can explore features with sample data
+- **Personalization**: Each user has their own data space
+- **Scalability**: Foundation for future data management features
+
 ## Project Structure
 
 ```
@@ -517,6 +611,9 @@ mykanban-app/
 │   │   │   ├── Dropdown.tsx      # Board options dropdown
 │   │   │   ├── Sidebar.tsx       # Board navigation sidebar
 │   │   │   └── BoardTasks.tsx    # Main board content area
+│   │   ├── utils/                # Utility functions and configurations
+│   │   │   ├── firebaseConfig.ts # Firebase configuration
+│   │   │   └── data.js           # Initial dummy data
 │   │   ├── globals.css           # Global styles
 │   │   ├── layout.tsx            # Root layout
 │   │   └── page.tsx              # Home page

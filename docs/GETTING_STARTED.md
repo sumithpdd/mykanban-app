@@ -11,6 +11,7 @@ This project uses a modular documentation structure for better organization and 
 - **[UI Components Implementation](UI_COMPONENTS.md)** - Building the interface
 - **[Firebase Firestore Integration](FIREBASE_SETUP.md)** - Database setup and configuration
 - **[CRUD Operations Implementation](CRUD_OPERATIONS.md)** - Complete functionality guide
+- **[Drag and Drop Implementation](DRAG_AND_DROP.md)** - Modern drag and drop with @dnd-kit
 - **[Project Brief](PROJECT_BRIEF.md)** - Project overview and goals
 
 ## 🚀 Quick Start

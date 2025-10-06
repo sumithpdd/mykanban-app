@@ -11,6 +11,8 @@ A full-stack Kanban task management application built with modern web technologi
 - **[UI Components Implementation](docs/UI_COMPONENTS.md)** - Building the interface
 - **[Firebase Firestore Integration](docs/FIREBASE_SETUP.md)** - Database setup and configuration
 - **[CRUD Operations Implementation](docs/CRUD_OPERATIONS.md)** - Complete functionality guide
+- **[Drag and Drop Implementation](docs/DRAG_AND_DROP.md)** - Modern drag and drop with @dnd-kit
+- **[Advanced Task Features](docs/ADVANCED_FEATURES.md)** - Tags, assignments, time tracking, and more
 
 ## 🚀 Quick Start
 
@@ -54,6 +56,13 @@ A full-stack Kanban task management application built with modern web technologi
 - **🔒 Protected Routes**: Middleware-based route protection ensuring only authenticated users can access the app
 - **✅ Form Validation**: Client-side validation with error messaging and auto-clear functionality
 - **🎨 Modern UI**: Clean, intuitive interface with loading states and user feedback
+- **🎯 Drag & Drop**: Modern drag and drop functionality using @dnd-kit for seamless task movement
+- **🏷️ Multiple Tags**: Color-coded tags for task categorization and organization
+- **👥 User Assignments**: Assign tasks to multiple team members with avatar display
+- **📅 Due Dates**: Set deadlines with overdue detection and visual indicators
+- **⏱️ Time Tracking**: Track time estimates and actual time spent on tasks
+- **📝 Rich Descriptions**: Detailed task descriptions for better context and clarity
+- **📊 Timestamps**: Automatic creation and update timestamps for audit trails
 
 ## 🛠️ Tech Stack
 
@@ -62,7 +71,7 @@ A full-stack Kanban task management application built with modern web technologi
 - **State Management**: Redux Toolkit with RTK Query
 - **Authentication**: NextAuth.js with Google Provider
 - **Database**: Firebase Firestore
-- **Drag & Drop**: react-beautiful-dnd
+- **Drag & Drop**: @dnd-kit (modern, accessible drag and drop)
 - **Deployment**: Vercel (recommended)
 
 ## 📁 Project Structure
@@ -123,6 +132,8 @@ For detailed development instructions, see our comprehensive documentation:
 - **[UI Components Implementation](docs/UI_COMPONENTS.md)** - Building interactive components and modal systems
 - **[Firebase Firestore Integration](docs/FIREBASE_SETUP.md)** - Database setup and real-time synchronization
 - **[CRUD Operations Implementation](docs/CRUD_OPERATIONS.md)** - Complete functionality implementation
+- **[Drag and Drop Implementation](docs/DRAG_AND_DROP.md)** - Modern drag and drop with @dnd-kit
+- **[Advanced Task Features](docs/ADVANCED_FEATURES.md)** - Tags, assignments, time tracking, and more
 - **[Getting Started Guide](docs/GETTING_STARTED.md)** - Step-by-step setup and installation
 
 ## 🚀 Current Status
@@ -136,16 +147,25 @@ For detailed development instructions, see our comprehensive documentation:
 ✅ **Delete Operations**: Safe deletion with confirmation modals  
 ✅ **UI Components**: Responsive design with Tailwind CSS  
 ✅ **Type Safety**: Full TypeScript implementation  
+✅ **Drag & Drop**: Modern drag and drop functionality with @dnd-kit  
+✅ **Advanced Features**: Tags, assignments, time tracking, due dates, and rich descriptions  
 
 ## 🔮 Future Enhancements
 
-- **Drag & Drop**: Implement react-beautiful-dnd for task movement
 - **Dark Mode**: Add theme switching capability
-- **Advanced Features**: Due dates, priorities, subtasks, attachments
+- **Custom Tags**: Allow users to create and manage custom tags
+- **File Attachments**: Attach files and documents to tasks
+- **Comments System**: Task discussion and collaboration features
+- **Subtasks**: Break down complex tasks into smaller components
+- **Dependencies**: Task dependency management and blocking
+- **Templates**: Reusable task templates for common workflows
+- **Reporting**: Time tracking and productivity reports
+- **Notifications**: Real-time notifications for due dates and updates
 - **Collaboration**: Board sharing and team features
-- **Notifications**: Real-time updates and alerts
 - **Analytics**: Productivity tracking and reporting
 - **Offline Support**: Progressive Web App capabilities
+- **Multi-select**: Drag multiple tasks simultaneously
+- **Nested Drag**: Implement nested drag and drop for subtasks
 
 ## 🤝 Contributing
 

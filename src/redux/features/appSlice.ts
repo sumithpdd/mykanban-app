@@ -7,6 +7,7 @@ currentBoardName: "",
 isAddAndEditBoardModal: { isOpen: false, variant: "" },
 isAddAndEditTaskModal: { isOpen: false, variant: "", title: "", index: -1, name: ""},
 isDeleteBoardAndTaskModal: { isOpen: false, variant: "",  title:'', status: "", index: -1 },
+isTagManagementModal: { isOpen: false },
 };
 
 export const features = createSlice({
@@ -60,6 +61,14 @@ closeDeleteBoardAndTaskModal: (state) => {
   state.isDeleteBoardAndTaskModal.status = "";
   state.isDeleteBoardAndTaskModal.index = -1;
 },
+// Open the tag management modal
+openTagManagementModal: (state) => {
+  state.isTagManagementModal.isOpen = true;
+},
+// Close the tag management modal
+closeTagManagementModal: (state) => {
+  state.isTagManagementModal.isOpen = false;
+},
 },
 });
 export const {
@@ -70,6 +79,8 @@ openAddAndEditTaskModal,
 closeAddAndEditTaskModal,
 openDeleteBoardAndTaskModal,
 closeDeleteBoardAndTaskModal,
+openTagManagementModal,
+closeTagManagementModal,
 
 } = features.actions;
 
@@ -96,6 +107,9 @@ export const getAddAndEditTaskModalName = (state: RootState) => state.features.i
  export const getDeleteBoardAndTaskModalStatus = (state: RootState) => state.features.isDeleteBoardAndTaskModal.status;
  // Selector function to retrieve index state value
  export const getDeleteBoardAndTaskModalIndex = (state: RootState) => state.features.isDeleteBoardAndTaskModal.index;
+
+// Tag management modal selectors
+export const getTagManagementModalValue = (state: RootState) => state.features.isTagManagementModal.isOpen;
 
 // Export the reducer for use in the Redux store
 export default features.reducer;

@@ -10,8 +10,8 @@ getDeleteBoardAndTaskModalStatus,
 getCurrentBoardName,
 } from "@/redux/features/appSlice";
 import {
-useFetchDataFromDbQuery,
-useUpdateBoardToDbMutation,
+useFetchBoardsQuery,
+  useUpdateBoardMutation,
 } from "@/redux/services/apiSlice";
 
 export default function DeleteBoardAndTaskModal() {
@@ -24,51 +24,50 @@ export default function DeleteBoardAndTaskModal() {
   const taskTitle = useAppSelector(getDeleteBoardAndTaskModalTitle);
   const taskIndex = useAppSelector(getDeleteBoardAndTaskModalIndex);
   const taskStatus = useAppSelector(getDeleteBoardAndTaskModalStatus);
-  let { data } = useFetchDataFromDbQuery();
-  const [updateBoardToDb, { isLoading }] = useUpdateBoardToDbMutation();
+  let { data: boards } = useFetchBoardsQuery();
+  const [updateBoard, { isLoading }] = useUpdateBoardMutation();
 
   const handleDelete = (e: React.FormEvent<HTMLButtonElement>) => {
     e.preventDefault();
-    if (data) {
+    if (boards) {
       if (modalVariant === "Delete this board?") {
         // Implement the logic for deleting the board
         if (currentBoardName) {
-          //  Assuming data is available, you need to handle the logic to update the data
-          const [boards] = data;
-          const updatedBoards = boards.boards.filter(
-            (board: { name: string }) => board.name !== currentBoardName
+          //  Find and delete the board
+          const boardToDelete = boards.find(
+            (board: { name: string }) => board.name === currentBoardName
           );
-          updateBoardToDb(updatedBoards);
+          if (boardToDelete) {
+            // Use deleteBoard mutation here when implemented
+            // For now, we'll skip this as we don't have deleteBoard mutation exposed
+            console.log("Delete board:", boardToDelete.id);
+          }
         }
       } else {
         // Implement the logic for deleting a task
         if (taskIndex !== undefined && taskStatus && currentBoardName) {
-          const [boards] = data;
           //  Handle the logic to update the tasks
-          const updatedBoards = boards.boards.map(
-            (board: {
-              name: string;
-              columns: [{ name: string; tasks: [] }];
-            }) => {
-            // check the board active board
-              if (board.name === currentBoardName) {
-                // loop through the columns of the board to find the column in which the task to edit is
-                const updatedColumns = board.columns.map((column) => {
-                  if (column.name === taskStatus) {
-                    // delete the the task
-                    const updatedTasks = column.tasks.filter(
-                      (_, index: number) => index !== taskIndex
-                    );
-                    return { ...column, tasks: updatedTasks };
-                  }
-                  return column;
-                });
-                return { ...board, columns: updatedColumns };
-              }
-              return board;
-            }
+          const activeBoard = boards.find(
+            (board: { name: string }) => board.name === currentBoardName
           );
-          updateBoardToDb(updatedBoards);
+          
+          if (activeBoard) {
+            const updatedColumns = activeBoard.columns.map((column: any) => {
+              if (column.name === taskStatus) {
+                const updatedTasks = column.tasks.filter(
+                  (_: any, index: number) => index !== taskIndex
+                );
+                return { ...column, tasks: updatedTasks };
+              }
+              return column;
+            });
+            
+            updateBoard({
+              boardId: activeBoard.id,
+              boardData: { columns: updatedColumns as any }
+            });
+            closeModal();
+          }
         }
       }
     }

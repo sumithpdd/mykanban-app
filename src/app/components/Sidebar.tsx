@@ -1,14 +1,21 @@
 import { useState } from "react";
 import { useAppDispatch } from "@/redux/hooks";
-import { useFetchDataFromDbQuery } from "@/redux/services/apiSlice";
+import { useFetchBoardsQuery } from "@/redux/services/apiSlice";
 import { setCurrentBoardName } from "@/redux/features/appSlice";
 import { openAddAndEditBoardModal } from "@/redux/features/appSlice";
+import { useSession } from 'next-auth/react';
 
 export default function Sidebar() {
   // State to keep track of the index of the active board during navigation
   const [active, setActive] = useState<number>(0);
+  const { data: session, status } = useSession();
 
-  const { data } = useFetchDataFromDbQuery();
+  const { data: boards } = useFetchBoardsQuery();
+  
+  // Debug logging
+  console.log('🔍 Sidebar - boards:', boards);
+  console.log('🔍 Sidebar - boards length:', boards?.length);
+  
   const dispatch = useAppDispatch();
 
   // Function to handle navigation through boards
@@ -19,14 +26,14 @@ export default function Sidebar() {
 
   return (
     <aside className="w-[18.75rem] flex-none dark:bg-dark-grey h-full py-6 pr-6">
-      {data && (
+      {boards && (
         <>
           {/* Display the number of boards available in the data */}
           <p className="text-medium-grey pl-[2.12rem] text-[.95rem] font-semibold uppercase pb-3">
-            {`All Boards (${data[0]?.boards.length})`}
+            {`All Boards (${boards?.length || 0})`}
           </p>
           {/* Display the names of each board */}
-          {data[0]?.boards.map(
+          {boards?.map(
             (board: { [key: string]: any }, index: number) => {
               const { name, id } = board;
               const isActive = index === active; // Check if the board is active

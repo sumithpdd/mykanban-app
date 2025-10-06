@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Modal, ModalBody } from "./Modal";
 import { useAppSelector, useAppDispatch } from "@/redux/hooks";
+import { id } from '../utils/id';
 //import needed functions from the appSlice
 import {
   getAddAndEditBoardModalValue,
@@ -9,12 +10,13 @@ import {
   getCurrentBoardName,
 } from "@/redux/features/appSlice";
 import {
-  useFetchDataFromDbQuery,
-  useUpdateBoardToDbMutation,
+  useFetchBoardsQuery,
+  useUpdateBoardMutation,
+  useCreateBoardMutation,
 } from "@/redux/services/apiSlice";
 
 import { FaTimes } from "react-icons/fa";
-import { id } from '../utils/data'
+
 // define types for boarddata
 interface IBoardData {
   id: string,
@@ -58,24 +60,26 @@ const currentBoardTitle = useAppSelector(getCurrentBoardName);
 // close the modal
 const closeModal = () => dispatch(closeAddAndEditBoardModal());
 // Fetch data from the database to populate the edit board modal
-let { data } = useFetchDataFromDbQuery();
+let { data: boards } = useFetchBoardsQuery();
 // Mutation hook for updating the board in the database
-const [updateBoardToDb, { isLoading }] = useUpdateBoardToDbMutation();
+const [updateBoard, { isLoading: isUpdating }] = useUpdateBoardMutation();
+const [createBoard, { isLoading: isCreating }] = useCreateBoardMutation();
+const isLoading = isUpdating || isCreating;
 
  // Effect to set initial data for the modal based on the variant
  useEffect(() => {
-  if (data) {
+  if (boards) {
 
     if (isVariantAdd) {
       setBoardData(addBoardData);
     } else {
-      const activeBoard = data[0].boards.find(
+      const activeBoard = boards.find(
         (board: { name: string }) => board.name === currentBoardTitle
       );
       setBoardData(activeBoard);
     }
   }
-}, [data, modalVariant]);
+}, [boards, modalVariant]);
 
 // Effect to clear error messages after a certain time
 useEffect(() => {
@@ -159,13 +163,16 @@ const handleAddNewBoardToDb = (e: React.FormEvent<HTMLButtonElement>) => {
     setEmptyColumnIndex(emptyColumn);
   }
 
-  if (boardData?.name !== "" && !emptyColumnStringChecker) {
+  if (boardData?.name !== "" && !emptyColumnStringChecker && boardData) {
     //submit to the database after verifying that the board name and none of the column names aren't empty
-    if (data) {
-      let [boards] = data;
-      const addBoard = [...boards.boards, boardData];
-      boards = addBoard;
-      updateBoardToDb(boards);
+    if (boards) {
+      createBoard({
+        name: boardData.name,
+        description: "",
+        columns: boardData.columns as any,
+        ownerId: "", // Will be set automatically by the API
+      });
+      closeModal();
     }
   }
 };
@@ -188,20 +195,21 @@ const handleEditBoardToDb = (e: React.FormEvent<HTMLButtonElement>) => {
     setEmptyColumnIndex(emptyColumn);
   }
   //submit to the database after verifying that the board name and none of the column names aren't empty
-  if (boardData?.name !== "" && !emptyColumnStringChecker) {
-    if (data) {
-      const [boards] = data;
-      const boardsCopy = [...boards.boards]; 
-      const activeBoardIndex = boardsCopy.findIndex(
+  if (boardData?.name !== "" && !emptyColumnStringChecker && boardData) {
+    if (boards) {
+      const activeBoard = boards.find(
         (board: { name: string }) => board.name === currentBoardTitle
       );
-      const updatedBoard = {
-        ...boards.boards[activeBoardIndex],
-        name: boardData!.name,
-        columns: boardData!.columns,
-      } ;
-      boardsCopy[activeBoardIndex] = updatedBoard;
-      updateBoardToDb(boardsCopy);
+      if (activeBoard) {
+        updateBoard({
+          boardId: activeBoard.id,
+          boardData: {
+            name: boardData.name,
+            columns: boardData.columns as any,
+          }
+        });
+        closeModal();
+      }
     }
   }
 };

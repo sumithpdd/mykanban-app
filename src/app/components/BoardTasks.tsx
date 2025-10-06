@@ -21,6 +21,7 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import type { ITask, IColumn, IBoard, IUser, ITag } from "@/redux/services/apiSlice";
+import DOMPurify from 'isomorphic-dompurify';
 
 // Sortable Task Component
 function SortableTask({ 
@@ -58,7 +59,15 @@ function SortableTask({
     if (minutes < 60) return `${minutes}m`;
     const hours = Math.floor(minutes / 60);
     const remainingMinutes = minutes % 60;
-    return remainingMinutes > 0 ? `${hours}h ${remainingMinutes}m` : `${hours}h`;
+    if (remainingMinutes === 0) return `${hours}h`;
+    return `${hours}h ${remainingMinutes}m`;
+  };
+
+  // Format time in hours with decimal
+  const formatTimeHours = (minutes?: number) => {
+    if (minutes === undefined || minutes === null) return '';
+    const hours = minutes / 60;
+    return `${hours.toFixed(1)}h`;
   };
 
   // Format date helper
@@ -88,6 +97,15 @@ function SortableTask({
       {...attributes}
       {...listeners}
       className="bg-white p-4 rounded-md mt-3 flex flex-col border cursor-grab active:cursor-grabbing hover:shadow-md transition-shadow"
+      onDoubleClick={(e) => {
+        e.stopPropagation();
+        dispatch(openAddAndEditTaskModal({
+          variant: 'Edit Task',
+          title: task.title,
+          index: taskIndex,
+          name: columnName,
+        }));
+      }}
     >
       {/* Tags */}
       {taskTags.length > 0 && (
@@ -107,9 +125,32 @@ function SortableTask({
       {/* Task Title */}
       <h3 className="font-medium text-gray-900 mb-2 line-clamp-2">{task.title}</h3>
 
-      {/* Description */}
+      {/* Description (render sanitized HTML) */}
       {task.description && (
-        <p className="text-sm text-gray-600 mb-2 line-clamp-2">{task.description}</p>
+        <div
+          className="prose prose-sm max-w-none text-gray-700 mb-2 line-clamp-2"
+          dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(task.description) }}
+        />
+      )}
+
+      {/* Checklist Progress */}
+      {task.checklistItems && task.checklistItems.length > 0 && (
+        <div className="mb-2">
+          <div className="flex items-center justify-between text-xs text-gray-500 mb-1">
+            <span>Checklist</span>
+            <span>
+              {task.checklistItems.filter(item => item.completed).length} / {task.checklistItems.length}
+            </span>
+          </div>
+          <div className="w-full bg-gray-200 rounded-full h-1.5">
+            <div 
+              className="bg-blue-500 h-1.5 rounded-full transition-all duration-300"
+              style={{ 
+                width: `${Math.round((task.checklistItems.filter(item => item.completed).length / task.checklistItems.length) * 100)}%` 
+              }}
+            />
+          </div>
+        </div>
       )}
 
       {/* Due Date */}
@@ -130,12 +171,35 @@ function SortableTask({
       {/* Time Information */}
       <div className="flex items-center gap-2 text-xs text-gray-500 mb-2">
         {task.timeEstimate && task.timeEstimate > 0 && (
-          <span>⏱️ Est: {formatTime(task.timeEstimate)}</span>
+          <span>⏱️ Est: {formatTimeHours(task.timeEstimate)}</span>
         )}
         {task.timeSpent && task.timeSpent > 0 && (
-          <span>⏰ Spent: {formatTime(task.timeSpent)}</span>
+          <span>⏰ Spent: {formatTimeHours(task.timeSpent)}</span>
+        )}
+        {task.updatedBy && (
+          <span className="ml-auto text-[11px] text-gray-400">Updated by {task.updatedBy}</span>
         )}
       </div>
+
+      {/* Checklist summary */}
+      {task.checklistItems && task.checklistItems.length > 0 && (
+        <div className="mb-2">
+          <div className="text-xs text-gray-500 mb-1">
+            Checklist: {task.checklistItems.filter(i => i.completed).length}/{task.checklistItems.length}
+          </div>
+          <ul className="space-y-1">
+            {task.checklistItems.slice(0, 3).map(item => (
+              <li key={item.id} className="flex items-center text-xs text-gray-600">
+                <span className={`inline-block w-3 h-3 mr-2 rounded border ${item.completed ? 'bg-green-500 border-green-500' : 'border-gray-300'}`} />
+                <span className={`truncate ${item.completed ? 'line-through text-gray-400' : ''}`}>{item.text}</span>
+              </li>
+            ))}
+            {task.checklistItems.length > 3 && (
+              <li className="text-[11px] text-gray-400">+{task.checklistItems.length - 3} more</li>
+            )}
+          </ul>
+        </div>
+      )}
 
       {/* Assigned Users */}
       {assignedUsers.length > 0 && (
@@ -291,18 +355,20 @@ export default function BoardTasks() {
   const [createBoard] = useCreateBoardMutation();
   
   // Debug logging with timestamps
-  console.log('🔍 BoardTasks -', new Date().toISOString(), '- session status:', status);
-  console.log('🔍 BoardTasks -', new Date().toISOString(), '- session:', session);
-  console.log('🔍 BoardTasks -', new Date().toISOString(), '- currentUser:', currentUser);
-  console.log('🔍 BoardTasks -', new Date().toISOString(), '- userLoading:', userLoading);
-  console.log('🔍 BoardTasks -', new Date().toISOString(), '- isLoading:', isLoading);
-  console.log('🔍 BoardTasks -', new Date().toISOString(), '- boards:', boards);
-  console.log('🔍 BoardTasks -', new Date().toISOString(), '- error:', error);
-  console.log('🔍 BoardTasks -', new Date().toISOString(), '- users:', users);
-  console.log('🔍 BoardTasks -', new Date().toISOString(), '- tags:', tags);
+  if (process.env.NODE_ENV !== 'production') {
+    console.log('🔍 BoardTasks -', new Date().toISOString(), '- session status:', status);
+    console.log('🔍 BoardTasks -', new Date().toISOString(), '- session:', session);
+    console.log('🔍 BoardTasks -', new Date().toISOString(), '- currentUser:', currentUser);
+    console.log('🔍 BoardTasks -', new Date().toISOString(), '- userLoading:', userLoading);
+    console.log('🔍 BoardTasks -', new Date().toISOString(), '- isLoading:', isLoading);
+    console.log('🔍 BoardTasks -', new Date().toISOString(), '- boards:', boards);
+    console.log('🔍 BoardTasks -', new Date().toISOString(), '- error:', error);
+    console.log('🔍 BoardTasks -', new Date().toISOString(), '- users:', users);
+    console.log('🔍 BoardTasks -', new Date().toISOString(), '- tags:', tags);
+  }
   
   // Additional session debugging
-  console.log('🔍 BoardTasks - session status transitions:', {
+  if (process.env.NODE_ENV !== 'production') console.log('🔍 BoardTasks - session status transitions:', {
     status,
     hasSession: !!session,
     sessionUser: session?.user,
@@ -318,7 +384,7 @@ export default function BoardTasks() {
   const dispatch = useAppDispatch();
   
   // Debug Redux state
-  console.log('🔍 BoardTasks -', new Date().toISOString(), '- Redux activeBoard:', activeBoard);
+  if (process.env.NODE_ENV !== 'production') console.log('🔍 BoardTasks -', new Date().toISOString(), '- Redux activeBoard:', activeBoard);
 
   // Check if it's the first render to avoid sending data to backend on mount
   const initialRender = useRef(true);
@@ -326,7 +392,7 @@ export default function BoardTasks() {
   // Create a default board if user has no boards
   useEffect(() => {
     if (status === 'authenticated' && boards && boards.length === 0 && !isLoading) {
-      console.log('🚀 Creating default board for new user');
+      if (process.env.NODE_ENV !== 'production') console.log('🚀 Creating default board for new user');
       createBoard({
         name: "My First Board",
         description: "Welcome to your Kanban board!",
@@ -366,8 +432,10 @@ export default function BoardTasks() {
 
   // Once data fetches successfully, this function in the useEffect runs
   useEffect(() => {
-    console.log('🔍 useEffect - boards:', boards);
-    console.log('🔍 useEffect - activeBoard:', activeBoard);
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('🔍 useEffect - boards:', boards);
+      console.log('🔍 useEffect - activeBoard:', activeBoard);
+    }
     
     if (boards && boards.length > 0) {
         // Get the data of the active board
@@ -375,14 +443,14 @@ export default function BoardTasks() {
         (board: IBoard) => board.name === activeBoard
         );
       
-      console.log('🔍 useEffect - activeBoardData:', activeBoardData);
+      if (process.env.NODE_ENV !== 'production') console.log('🔍 useEffect - activeBoardData:', activeBoardData);
       
         if (activeBoardData) {
-        console.log('✅ Setting columns:', activeBoardData.columns);
+        if (process.env.NODE_ENV !== 'production') console.log('✅ Setting columns:', activeBoardData.columns);
         setCurrentBoard(activeBoardData);
         setColumns(activeBoardData.columns);
       } else {
-        console.log('❌ No active board found, keeping current board if it exists');
+        if (process.env.NODE_ENV !== 'production') console.log('❌ No active board found, keeping current board if it exists');
         // Only reset to first board if we don't have any current board
         if (!currentBoard && boards.length > 0) {
           const firstBoard = boards[0];

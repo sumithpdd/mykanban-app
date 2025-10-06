@@ -1,5 +1,134 @@
 # My Kanban Task Management App
 
+Modern, full‑stack Kanban built with Next.js App Router, TypeScript, Tailwind CSS, Redux Toolkit + RTK Query, NextAuth (Google), Firebase Firestore, and dnd-kit.
+
+## Documentation
+
+- Architecture: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
+- Data Model: [docs/DATA_MODEL.md](docs/DATA_MODEL.md)
+- Developer Guide: [docs/DEV_GUIDE.md](docs/DEV_GUIDE.md)
+
+## Quick Start
+
+1. Prerequisites: Node 18+, a Firebase project, Google OAuth credentials
+2. Clone and install
+```bash
+npm install
+```
+3. Create `.env.local` from `env-template.txt` and fill real values
+4. Run
+```bash
+npm run dev
+```
+
+## Environment Variables
+
+See `env-template.txt` for all keys. Critical ones:
+- GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET
+- NEXTAUTH_SECRET / NEXTAUTH_URL
+- NEXT_PUBLIC_FIREBASE_* (apiKey, projectId, etc.)
+- NEXT_PUBLIC_TINYMCE_API_KEY
+
+## Tech Overview (with docs)
+
+- Next.js App Router (Client/Server Components, Route Handlers)
+  - https://nextjs.org/docs/app
+- TypeScript everywhere
+  - https://www.typescriptlang.org/docs/
+- Tailwind CSS for utility styling
+  - https://tailwindcss.com/docs
+- Redux Toolkit + RTK Query for state and data fetching
+  - https://redux-toolkit.js.org/
+  - https://redux-toolkit.js.org/rtk-query/overview
+- NextAuth (Google) for authentication
+  - https://authjs.dev/
+- Firebase Firestore for data
+  - https://firebase.google.com/docs/firestore
+- dnd-kit for drag-and-drop
+  - https://docs.dndkit.com/
+- TinyMCE for rich text descriptions
+  - https://www.tiny.cloud/docs/
+
+## Project Structure
+
+```
+src/
+  app/                # App Router
+    components/       # UI components (Navbar, Sidebar, BoardTasks, Modals)
+  redux/
+    features/         # UI state (appSlice)
+    services/         # RTK Query apiSlice (Firestore endpoints)
+  ...
+data-migration/       # Safe utility scripts (diagnose/fix/populate)
+docs/                 # Developer docs
+```
+
+## Data Model (Firestore)
+
+- users: { id, email, name, avatar, createdAt, updatedAt }
+- tags: { id, name, color, description, createdAt, updatedAt }
+- boards: { id, ownerId, name, description, columns[], createdAt, updatedAt }
+  - columns: { id, name, tasks[] }
+  - tasks: {
+      id, title, description (HTML), status, order,
+      tags[string], assignedTo[string],
+      dueDate?, createdAt, createdBy?, updatedAt, updatedBy?,
+      completedDate?, timeSpent (min), timeEstimate? (min),
+      checklistItems?: [{ id, text, completed, createdAt, updatedAt }],
+      notes?
+    }
+
+## App Flow
+
+1. Authentication via NextAuth (Google)
+2. On load, `useGetCurrentUserQuery` ensures the user exists in `users`
+3. Boards fetched with `useFetchBoardsQuery` scoped by `ownerId`
+4. UI state (current board, modals) handled in `appSlice`
+5. CRUD via RTK Query endpoints in `apiSlice.ts`
+6. Drag and drop via dnd-kit updates task positions and sets `completedDate` when dropped in the last column
+7. Rich descriptions (HTML) are sanitized with DOMPurify when rendering on task cards
+
+## Development Workflow
+
+- UI state in `appSlice.ts` (keep it minimal and serializable)
+- Server interactions in `apiSlice.ts` (one place for Firestore logic)
+- Prefer RTK Query mutations for updates; avoid manual fetches
+- Keep components presentational; derive data via hooks
+- Use IDs (not objects) for relations: `assignedTo: string[]`, `tags: string[]`
+
+## Accessibility & UX
+
+- Keyboard-friendly checklist (Enter adds item; no form submits)
+- Double-click task to open Edit
+- Cards show sanitized HTML description and small checklist preview
+
+## Scripts
+
+See `data-migration/README.md` for diagnose/fix/populate utilities.
+
+## Contributing Notes for Juniors
+
+Start here:
+1. Read docs in `docs/`
+2. Trace the flow: `layout.tsx` → `Navbar/Sidebar` → `BoardTasks` → modals
+3. Understand RTK Query endpoints in `apiSlice.ts`
+4. When adding fields, update: Type (`ITask`), forms (modals), and mutations
+
+### Useful Concepts
+
+- Client vs Server Components: https://nextjs.org/docs/app/building-your-application/rendering/composition-patterns#using-client-components
+- React hooks rules: https://react.dev/reference/rules/rules-of-hooks
+- Firestore array/object updates: https://firebase.google.com/docs/firestore/manage-data/add-data
+- DnD strategies: https://docs.dndkit.com/presets/sortable
+
+## Security & Best Practices
+
+- Never commit `.env.local`
+- Sanitize HTML (DOMPurify) when rendering descriptions
+- Guard mutations with server-side validation where appropriate
+- Keep console logs behind `if (process.env.NODE_ENV !== 'production')`
+
+
 A full-stack Kanban task management application built with modern web technologies. This app allows users to organize and manage their tasks using a drag-and-drop Kanban board interface with real-time updates and persistent data storage.
 
 ## 📚 Documentation

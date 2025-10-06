@@ -48,5 +48,5 @@ interface ModalBody {
 }
 
 export function ModalBody({ children }: ModalBody) {
-  return <form className="w-[21.4rem] md:w-[30rem] p-8">{children}</form>;
+  return <form className="w-[24rem] md:w-[44rem] lg:w-[56rem] p-8">{children}</form>;
 }

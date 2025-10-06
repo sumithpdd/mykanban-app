@@ -19,7 +19,9 @@ import {
   useFetchTagsQuery,
 } from "@/redux/services/apiSlice";
 import { id } from '../utils/id'
-import type { ITask, IUser, ITag } from "@/redux/services/apiSlice";
+import type { ITask, IUser, ITag, IChecklistItem } from "@/redux/services/apiSlice";
+import RichTextEditor from './RichTextEditor';
+import Checklist from './Checklist';
 
 // Define types for the tasks data in the modal (using string arrays for IDs)
 interface ITaskData {
@@ -34,6 +36,9 @@ interface ITaskData {
   updatedAt: string; // ISO date string
   timeSpent: number; // in minutes
   timeEstimate?: number; // in minutes
+  checklistItems?: IChecklistItem[]; // Array of checklist items
+  notes?: string;
+  updatedBy?: string;
 }
 
 // These will be populated from the API
@@ -50,6 +55,8 @@ let initialTaskData: ITaskData = {
   updatedAt: new Date().toISOString(),
   timeSpent: 0,
   timeEstimate: undefined,
+  checklistItems: [],
+  notes: "",
 };
 
 export default function AddOrEditTaskModal() {
@@ -117,6 +124,7 @@ export default function AddOrEditTaskModal() {
               updatedAt: new Date().toISOString(), // Always update this
               timeSpent: activeTask.timeSpent || 0,
               timeEstimate: activeTask.timeEstimate || undefined,
+              checklistItems: activeTask.checklistItems || [],
             });
           }
         }
@@ -142,13 +150,6 @@ export default function AddOrEditTaskModal() {
     }
   };
 
-  // Handler for task description change
-  const handleTaskDescriptionChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    if (taskData) {
-      const newData = { ...taskData, description: e.target.value, updatedAt: new Date().toISOString() };
-      setTaskData(newData);
-    }
-  };
 
   // Handler for task status change
   const handleTaskStatusChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -369,7 +370,10 @@ export default function AddOrEditTaskModal() {
     <Modal isOpen={isModalOpen} onRequestClose={closeModal}>
       <ModalBody>
         <p className="font-bold text-lg">{modalVariant}</p>
-        <div className="py-6 space-y-4">
+        <div className="py-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Left Column - Main Content */}
+            <div className="space-y-6">
           {/* Title Field */}
           <div>
             <label htmlFor="title" className="text-sm font-medium text-gray-700">
@@ -396,164 +400,187 @@ export default function AddOrEditTaskModal() {
             <label htmlFor="description" className="text-sm font-medium text-gray-700">
               Description
             </label>
-            <div className="pt-1">
-              <textarea
-                id="description"
-                className="border border-gray-300 w-full p-3 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="Enter task description"
-                rows={3}
-                value={taskData?.description || ""}
-                onChange={handleTaskDescriptionChange}
-              />
-            </div>
+            <RichTextEditor
+              value={taskData?.description || ""}
+              onChange={(content) => {
+                if (taskData) {
+                  const newData = { ...taskData, description: content, updatedAt: new Date().toISOString() };
+                  setTaskData(newData);
+                }
+              }}
+              placeholder="Add a more detailed description..."
+            />
           </div>
 
-          {/* Status Field */}
-          <div>
-            <label htmlFor="status" className="text-sm font-medium text-gray-700">
-              Status *
-            </label>
-            <div className="pt-1">
-              <select
-                id="status"
-                className={`${
-                  isTaskStatusEmpty || !statusExists
-                    ? "border-red-500"
-                    : "border-gray-300"
-                } border w-full p-3 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500`}
-                value={taskData?.status || ""}
-                onChange={handleTaskStatusChange}
-              >
-                <option value="">Select status</option>
-                {columnNames.map((column) => (
-                  <option key={column} value={column}>
-                    {column}
-                  </option>
-                ))}
-              </select>
-            </div>
-            {isTaskStatusEmpty && (
-              <p className="text-xs text-red-500 mt-1">Task status cannot be empty</p>
-            )}
-            {!statusExists && (
-              <p className="text-xs text-red-500 mt-1">Column does not exist</p>
-            )}
-          </div>
+          {/* Checklist */}
+          <Checklist
+            items={taskData?.checklistItems || []}
+            onItemsChange={(items) => {
+              if (taskData) {
+                const newData = { ...taskData, checklistItems: items, updatedAt: new Date().toISOString() };
+                setTaskData(newData);
+              }
+            }}
+          />
 
-          {/* Due Date Field */}
-          <div>
-            <label htmlFor="dueDate" className="text-sm font-medium text-gray-700">
-              Due Date
-            </label>
-            <div className="pt-1">
-              <input
-                id="dueDate"
-                type="date"
-                className="border border-gray-300 w-full p-3 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                value={taskData?.dueDate || ""}
-                onChange={handleDueDateChange}
-              />
-            </div>
-          </div>
-
-          {/* Time Fields */}
+          {/* Due Date (left column only) */}
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label htmlFor="timeEstimate" className="text-sm font-medium text-gray-700">
-                Time Estimate (minutes)
+              <label htmlFor="dueDate" className="text-sm font-medium text-gray-700">
+                Due Date
               </label>
               <div className="pt-1">
                 <input
-                  id="timeEstimate"
-                  type="number"
-                  min="0"
+                  id="dueDate"
+                  type="date"
                   className="border border-gray-300 w-full p-3 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="0"
-                  value={taskData?.timeEstimate || ""}
-                  onChange={handleTimeEstimateChange}
+                  value={taskData?.dueDate || ""}
+                  onChange={handleDueDateChange}
                 />
               </div>
             </div>
-            <div>
-              <label htmlFor="timeSpent" className="text-sm font-medium text-gray-700">
-                Time Spent (minutes)
-              </label>
-              <div className="pt-1">
-                <input
-                  id="timeSpent"
-                  type="number"
-                  min="0"
-                  className="border border-gray-300 w-full p-3 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="0"
-                  value={taskData?.timeSpent || ""}
-                  onChange={handleTimeSpentChange}
-                />
-              </div>
-            </div>
+            <div />
           </div>
-
-          {/* Tags Field */}
-          <div>
-            <label className="text-sm font-medium text-gray-700">
-              Tags
-            </label>
-            <div className="pt-1">
-              <div className="flex flex-wrap gap-2">
-                {tags.map((tag) => {
-                  const isSelected = taskData?.tags.includes(tag.id) || false;
-                  return (
-                    <button
-                      key={tag.id}
-                      type="button"
-                      onClick={() => handleTagToggle(tag.id)}
-                      className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
-                        isSelected 
-                          ? 'text-white' 
-                          : 'text-gray-700 bg-gray-100 hover:bg-gray-200'
-                      }`}
-                      style={isSelected ? { backgroundColor: tag.color } : {}}
-                    >
-                      {tag.name}
-                    </button>
-                  );
-                })}
-              </div>
             </div>
-          </div>
 
-          {/* Assigned Users Field */}
-          <div>
-            <label className="text-sm font-medium text-gray-700">
-              Assign To
-            </label>
-            <div className="pt-1">
-              <div className="space-y-2">
-                {users.map((user) => {
-                  const isAssigned = taskData?.assignedTo.includes(user.id) || false;
-                  return (
-                    <div
-                      key={user.id}
-                      className={`flex items-center space-x-3 p-2 rounded-md cursor-pointer transition-colors ${
-                        isAssigned ? 'bg-blue-50 border border-blue-200' : 'hover:bg-gray-50'
-                      }`}
-                      onClick={() => handleUserToggle(user.id)}
-                    >
-                      <div className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-white text-sm font-medium">
-                        {user.name.charAt(0).toUpperCase()}
-                      </div>
-                      <div className="flex-1">
-                        <p className="text-sm font-medium text-gray-900">{user.name}</p>
-                        <p className="text-xs text-gray-500">{user.email}</p>
-                      </div>
-                      <input
-                        type="checkbox"
-                        checked={isAssigned}
-                        onChange={() => handleUserToggle(user.id)}
-                        className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                      />
-                    </div>
-                  );
-                })}
+            {/* Right Column - Meta (tags, status, notes, created, time, assign) */}
+            <div className="space-y-6">
+              {/* Tags Field */}
+              <div>
+                <label className="text-sm font-medium text-gray-700">
+                  Tags
+                </label>
+                <div className="pt-1">
+                  <div className="flex flex-wrap gap-2">
+                    {tags.map((tag) => {
+                      const isSelected = taskData?.tags.includes(tag.id) || false;
+                      return (
+                        <button
+                          key={tag.id}
+                          type="button"
+                          onClick={() => handleTagToggle(tag.id)}
+                          className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+                            isSelected 
+                              ? 'text-white' 
+                              : 'text-gray-700 bg-gray-100 hover:bg-gray-200'
+                          }`}
+                          style={isSelected ? { backgroundColor: tag.color } : {}}
+                        >
+                          {tag.name}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+
+              {/* Status */}
+              <div>
+                <label htmlFor="status" className="text-sm font-medium text-gray-700">Status *</label>
+                <div className="pt-1">
+                  <select
+                    id="status"
+                    className={`${isTaskStatusEmpty || !statusExists ? "border-red-500" : "border-gray-300"} border w-full p-3 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500`}
+                    value={taskData?.status || ""}
+                    onChange={handleTaskStatusChange}
+                  >
+                    <option value="">Select status</option>
+                    {columnNames.map((column) => (
+                      <option key={column} value={column}>{column}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {/* Notes */}
+              <div>
+                <label htmlFor="notes" className="text-sm font-medium text-gray-700">Notes</label>
+                <div className="pt-1">
+                  <textarea
+                    id="notes"
+                    className="border border-gray-300 w-full p-3 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="Add any additional notes here..."
+                    rows={4}
+                    value={taskData?.notes || ""}
+                    onChange={(e) => {
+                      if (taskData) {
+                        const newData = { ...taskData, notes: e.target.value, updatedAt: new Date().toISOString() };
+                        setTaskData(newData);
+                      }
+                    }}
+                  />
+                </div>
+              </div>
+
+              {/* Created On / Updated By */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium text-gray-700">Created</label>
+                  <div className="pt-1">
+                    <input type="text" readOnly className="border border-gray-200 bg-gray-50 text-gray-600 w-full p-3 rounded-md text-sm" value={taskData?.createdAt ? new Date(taskData.createdAt).toLocaleString() : ''} />
+                  </div>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-700">Updated By</label>
+                  <div className="pt-1">
+                    <input type="text" readOnly className="border border-gray-200 bg-gray-50 text-gray-600 w-full p-3 rounded-md text-sm" value={taskData?.updatedBy || ''} />
+                  </div>
+                </div>
+              </div>
+
+              {/* Time fields on right */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label htmlFor="timeEstimate" className="text-sm font-medium text-gray-700">Time Estimate (hours)</label>
+                  <div className="pt-1">
+                    <input id="timeEstimate" type="number" min="0" step="0.25" className="border border-gray-300 w-full p-3 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="e.g., 2.5" value={taskData?.timeEstimate ? (taskData.timeEstimate / 60).toFixed(2) : ""} onChange={(e) => { if (taskData) { const hours = parseFloat(e.target.value) || 0; const minutes = Math.round(hours * 60); const newData = { ...taskData, timeEstimate: minutes, updatedAt: new Date().toISOString() }; setTaskData(newData); } }} />
+                    <p className="text-xs text-gray-500 mt-1">Use decimal for minutes (e.g., 2.5 = 2h 30m)</p>
+                  </div>
+                </div>
+                <div>
+                  <label htmlFor="timeSpent" className="text-sm font-medium text-gray-700">Time Spent (hours)</label>
+                  <div className="pt-1">
+                    <input id="timeSpent" type="number" min="0" step="0.25" className="border border-gray-300 w-full p-3 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="e.g., 1.25" value={taskData?.timeSpent ? (taskData.timeSpent / 60).toFixed(2) : "0.00"} onChange={(e) => { if (taskData) { const hours = parseFloat(e.target.value) || 0; const minutes = Math.round(hours * 60); const newData = { ...taskData, timeSpent: minutes, updatedAt: new Date().toISOString() }; setTaskData(newData); } }} />
+                    <p className="text-xs text-gray-500 mt-1">Use decimal for minutes (e.g., 1.25 = 1h 15m)</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Assigned Users Field */}
+              <div>
+                <label className="text-sm font-medium text-gray-700">
+                  Assign To
+                </label>
+                <div className="pt-1">
+                  <div className="space-y-2">
+                    {users.map((user) => {
+                      const isAssigned = taskData?.assignedTo.includes(user.id) || false;
+                      return (
+                        <div
+                          key={user.id}
+                          className={`flex items-center space-x-3 p-2 rounded-md cursor-pointer transition-colors ${
+                            isAssigned ? 'bg-blue-50 border border-blue-200' : 'hover:bg-gray-50'
+                          }`}
+                          onClick={() => handleUserToggle(user.id)}
+                        >
+                          <div className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-white text-sm font-medium">
+                            {user.name.charAt(0).toUpperCase()}
+                          </div>
+                          <div className="flex-1">
+                            <p className="text-sm font-medium text-gray-900">{user.name}</p>
+                            <p className="text-xs text-gray-500">{user.email}</p>
+                          </div>
+                          <input
+                            type="checkbox"
+                            checked={isAssigned}
+                            onChange={() => handleUserToggle(user.id)}
+                            className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                          />
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
               </div>
             </div>
           </div>

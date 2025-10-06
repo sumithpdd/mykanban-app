@@ -21,14 +21,16 @@ import { openTagManagementModal } from '@/redux/features/appSlice';
    const dispatch = useAppDispatch();
 
    // Effect hook to run when the data updates
-   useEffect(() => {
-    console.log('🔍 Navbar - boards:', boards);
-    console.log('🔍 Navbar - boards length:', boards?.length);
+  useEffect(() => {
+   if (process.env.NODE_ENV !== 'production') {
+     console.log('🔍 Navbar - boards:', boards);
+     console.log('🔍 Navbar - boards length:', boards?.length);
+   }
     
     if (boards && boards.length > 0) {
       // When a user signs in, set the currentBoardName to the first board's name
       const activeBoard = boards[0];
-      console.log('🔍 Navbar - setting active board:', activeBoard.name);
+   if (process.env.NODE_ENV !== 'production') console.log('🔍 Navbar - setting active board:', activeBoard.name);
       dispatch(setCurrentBoardName(activeBoard.name));
     }
    }, [boards]);

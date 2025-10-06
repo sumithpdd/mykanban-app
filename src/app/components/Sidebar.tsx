@@ -13,8 +13,10 @@ export default function Sidebar() {
   const { data: boards } = useFetchBoardsQuery();
   
   // Debug logging
-  console.log('🔍 Sidebar - boards:', boards);
-  console.log('🔍 Sidebar - boards length:', boards?.length);
+  if (process.env.NODE_ENV !== 'production') {
+    console.log('🔍 Sidebar - boards:', boards);
+    console.log('🔍 Sidebar - boards length:', boards?.length);
+  }
   
   const dispatch = useAppDispatch();
 

@@ -51,6 +51,14 @@ export interface ITag {
   updatedAt: string;
 }
 
+export interface IChecklistItem {
+  id: string;
+  text: string;
+  completed: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface ITask {
   id: string;
   title: string;
@@ -61,10 +69,14 @@ export interface ITask {
   assignedTo: string[]; // Array of user IDs
   dueDate?: string;
   createdAt: string;
+  createdBy?: string;
   updatedAt: string;
+  updatedBy?: string; // user email or id
   completedDate?: string; // Auto-filled when moved to last column
   timeSpent: number;
   timeEstimate?: number;
+  checklistItems?: IChecklistItem[]; // Array of checklist items
+  notes?: string; // plain text short notes
 }
 
 export interface IColumn {
@@ -87,10 +99,10 @@ export const fireStoreApi = createApi({
   reducerPath: "firestoreApi",
   baseQuery: fakeBaseQuery(),
   tagTypes: ["Users", "Boards", "Tasks", "Tags"],
-  endpoints: (builder) => ({
+endpoints: (builder) => ({
     // Users endpoints
     fetchUsers: builder.query<IUser[], void>({
-      async queryFn() {
+   async queryFn() {
         try {
           const ref = collection(db, "users");
           const querySnapshot = await getDocs(ref);
@@ -105,13 +117,13 @@ export const fireStoreApi = createApi({
     // Get or create current user
     getCurrentUser: builder.query<IUser, void>({
       async queryFn() {
-        try {
-          const session = await getSession();
+     try {
+       const session = await getSession();
           if (!session?.user?.email) {
             return { error: "No session" };
           }
 
-          console.log('🔍 getCurrentUser - checking for user:', session.user.email);
+                  if (process.env.NODE_ENV !== 'production') console.log('🔍 getCurrentUser - checking for user:', session.user.email);
           
           // Check if user exists
           const usersRef = collection(db, "users");
@@ -121,11 +133,11 @@ export const fireStoreApi = createApi({
           if (querySnapshot.docs.length > 0) {
             // User exists
             const userData = { id: querySnapshot.docs[0].id, ...querySnapshot.docs[0].data() } as IUser;
-            console.log('✅ getCurrentUser - user exists:', userData);
+                    if (process.env.NODE_ENV !== 'production') console.log('✅ getCurrentUser - user exists:', userData);
             return { data: userData };
           } else {
             // User doesn't exist, create them
-            console.log('🆕 getCurrentUser - creating new user for:', session.user.email);
+                    if (process.env.NODE_ENV !== 'production') console.log('🆕 getCurrentUser - creating new user for:', session.user.email);
             const now = new Date().toISOString();
             const userRef = await addDoc(collection(db, "users"), {
               email: session.user.email,
@@ -144,7 +156,7 @@ export const fireStoreApi = createApi({
               updatedAt: now,
             } as IUser;
             
-            console.log('✅ getCurrentUser - created new user:', newUser);
+                    if (process.env.NODE_ENV !== 'production') console.log('✅ getCurrentUser - created new user:', newUser);
             return { data: newUser };
           }
         } catch (e) {
@@ -192,7 +204,7 @@ export const fireStoreApi = createApi({
       async queryFn() {
         try {
           const ref = collection(db, "tags");
-          const querySnapshot = await getDocs(ref);
+         const querySnapshot = await getDocs(ref);
           return { data: querySnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() } as ITag)) };
         } catch (e) {
           return { error: e };
@@ -250,19 +262,19 @@ export const fireStoreApi = createApi({
       async queryFn() {
         try {
           const session = await getSession();
-          console.log('🔍 fetchBoards -', new Date().toISOString(), '- session:', session);
+                  if (process.env.NODE_ENV !== 'production') console.log('🔍 fetchBoards -', new Date().toISOString(), '- session:', session);
           
           if (!session?.user?.email) {
-            console.log('❌ fetchBoards -', new Date().toISOString(), '- no session, returning empty array');
+                    if (process.env.NODE_ENV !== 'production') console.log('❌ fetchBoards -', new Date().toISOString(), '- no session, returning empty array');
             return { data: [] };
           }
           
-          console.log('🔍 fetchBoards -', new Date().toISOString(), '- user email:', session.user.email);
+                  if (process.env.NODE_ENV !== 'production') console.log('🔍 fetchBoards -', new Date().toISOString(), '- user email:', session.user.email);
           const ref = collection(db, "boards");
           const q = query(ref, where("ownerId", "==", session.user.email));
           const querySnapshot = await getDocs(q);
           const boards = querySnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() } as IBoard));
-          console.log('✅ fetchBoards -', new Date().toISOString(), '- found boards:', boards);
+                  if (process.env.NODE_ENV !== 'production') console.log('✅ fetchBoards -', new Date().toISOString(), '- found boards:', boards);
           return { data: boards };
         } catch (e) {
           console.error('❌ fetchBoards -', new Date().toISOString(), '- error:', e);
@@ -299,7 +311,7 @@ export const fireStoreApi = createApi({
           // Clean undefined values
           const cleanBoardData = cleanData(boardData);
           
-          console.log('🔍 updateBoard - cleaning data:', { boardId, originalData: boardData, cleanData: cleanBoardData });
+                  if (process.env.NODE_ENV !== 'production') console.log('🔍 updateBoard - cleaning data:', { boardId, originalData: boardData, cleanData: cleanBoardData });
           
           await updateDoc(doc(db, "boards", boardId), {
             ...cleanBoardData,
@@ -319,10 +331,10 @@ export const fireStoreApi = createApi({
         try {
           await deleteDoc(doc(db, "boards", boardId));
           return { data: null };
-        } catch (e) {
-          return { error: e };
-        }
-      },
+     } catch (e) {
+       return { error: e };
+     }
+   },
       invalidatesTags: ["Boards"],
     }),
 
@@ -341,12 +353,15 @@ export const fireStoreApi = createApi({
           if (!column) return { error: "Column not found" };
           
           const now = new Date().toISOString();
+          const sessionForCreate = await getSession();
           const newTask: ITask = {
             ...taskData,
             id: generateUniqueId('task-'),
             order: column.tasks.length, // Add to end of column
             createdAt: now,
+            createdBy: sessionForCreate?.user?.email || undefined,
             updatedAt: now,
+            updatedBy: sessionForCreate?.user?.email || undefined,
           };
           
           const updatedColumns = boardData.columns.map(col => {
@@ -385,7 +400,7 @@ export const fireStoreApi = createApi({
           // Clean undefined values from taskData
           const cleanTaskData = cleanData(taskData);
           
-          console.log('🔍 updateTask - cleaning data:', { boardId, columnId, taskId, originalData: taskData, cleanData: cleanTaskData });
+          if (process.env.NODE_ENV !== 'production') console.log('🔍 updateTask - cleaning data:', { boardId, columnId, taskId, originalData: taskData, cleanData: cleanTaskData });
           
           const boardRef = doc(db, "boards", boardId);
           const boardDoc = await getDocs(query(collection(db, "boards"), where("__name__", "==", boardId)));
@@ -393,6 +408,7 @@ export const fireStoreApi = createApi({
           if (boardDoc.empty) return { error: "Board not found" };
           
           const boardData = boardDoc.docs[0].data() as IBoard;
+          const sessionForUpdate = await getSession();
           const updatedColumns = boardData.columns.map(col => {
             if (col.id === columnId) {
               return {
@@ -402,7 +418,8 @@ export const fireStoreApi = createApi({
                     ? { 
                         ...task, 
                         ...cleanTaskData, 
-                        updatedAt: new Date().toISOString() 
+                        updatedAt: new Date().toISOString(),
+                        updatedBy: sessionForUpdate?.user?.email || task.updatedBy
                       }
                     : task
                 )
@@ -495,7 +512,7 @@ export const fireStoreApi = createApi({
           // Clean the data before saving to Firebase
           const cleanColumns = cleanData(updatedColumns);
           
-          console.log('🔍 moveTask - cleaning data:', { 
+          if (process.env.NODE_ENV !== 'production') console.log('🔍 moveTask - cleaning data:', { 
             boardId, 
             sourceColumnId, 
             destinationColumnId, 
@@ -516,8 +533,8 @@ export const fireStoreApi = createApi({
         }
       },
       invalidatesTags: ["Boards"],
-    }),
-  }),
+ }),
+}),
 });
 
 // Export hooks for using the created endpoints

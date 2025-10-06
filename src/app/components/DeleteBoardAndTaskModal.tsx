@@ -40,7 +40,7 @@ export default function DeleteBoardAndTaskModal() {
           if (boardToDelete) {
             // Use deleteBoard mutation here when implemented
             // For now, we'll skip this as we don't have deleteBoard mutation exposed
-            console.log("Delete board:", boardToDelete.id);
+            if (process.env.NODE_ENV !== 'production') console.log("Delete board:", boardToDelete.id);
           }
         }
       } else {

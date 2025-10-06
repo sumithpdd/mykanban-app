@@ -40,3 +40,4 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 .service.json
+data-migration/seed-devfest-2025.js

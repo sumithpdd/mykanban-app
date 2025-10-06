@@ -52,3 +52,12 @@ See `data-migration/README.md` for diagnose/fix/populate utilities.
 - Small components; clear prop types
 - No unused imports or dead code
 - Prefer early returns over deep nesting
+
+## Approval & Board Access
+
+- Users are created with `isApproved: false` on first login.
+- `fetchBoards` returns boards only if the current user is approved.
+- Board visibility: user sees boards where they are:
+  - `ownerId` (creator), or in `owners[]`, or in `members[]`.
+- To approve a user: set `isApproved=true` in the `users` collection for their email.
+- To manage access: in the board modal, add comma‑separated emails in Owners/Members.

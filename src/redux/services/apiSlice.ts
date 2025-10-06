@@ -15,17 +15,18 @@ import {
 import { db } from "@/app/utils/firebaseConfig";
 
 // Utility function to clean undefined values from objects
-const cleanData = (data: any): any => {
-  if (typeof data !== 'object' || data === null) return data;
-  
-  if (Array.isArray(data)) {
-    return data.map(cleanData);
-  }
-  
-  return Object.fromEntries(
-    Object.entries(data).filter(([_, value]) => value !== undefined)
-  );
-};
+        const cleanData = (data: any): any => {
+          if (typeof data !== 'object' || data === null) return data;
+          if (Array.isArray(data)) {
+            return data.map(cleanData).filter((v) => v !== undefined);
+          }
+          const cleaned: Record<string, any> = {};
+          for (const [k, v] of Object.entries(data)) {
+            if (v === undefined) continue;
+            cleaned[k] = cleanData(v);
+          }
+          return cleaned;
+        };
 
 // Utility function to generate unique IDs
 const generateUniqueId = (prefix: string = ''): string => {
@@ -40,6 +41,7 @@ export interface IUser {
   avatar?: string;
   createdAt: string;
   updatedAt: string;
+  isApproved?: boolean;
 }
 
 export interface ITag {
@@ -90,7 +92,9 @@ export interface IBoard {
   name: string;
   description?: string;
   columns: IColumn[];
-  ownerId: string; // User ID who owns this board
+  ownerId: string; // owner email
+  owners?: string[]; // additional owner emails
+  members?: string[]; // member emails
   createdAt: string;
   updatedAt: string;
 }
@@ -100,7 +104,7 @@ export const fireStoreApi = createApi({
   baseQuery: fakeBaseQuery(),
   tagTypes: ["Users", "Boards", "Tasks", "Tags"],
 endpoints: (builder) => ({
-    // Users endpoints
+            // Users endpoints
     fetchUsers: builder.query<IUser[], void>({
    async queryFn() {
         try {
@@ -115,7 +119,7 @@ endpoints: (builder) => ({
     }),
 
     // Get or create current user
-    getCurrentUser: builder.query<IUser, void>({
+            getCurrentUser: builder.query<IUser, void>({
       async queryFn() {
      try {
        const session = await getSession();
@@ -127,7 +131,7 @@ endpoints: (builder) => ({
           
           // Check if user exists
           const usersRef = collection(db, "users");
-          const q = query(usersRef, where("email", "==", session.user.email));
+                  const q = query(usersRef, where("email", "==", session.user.email));
           const querySnapshot = await getDocs(q);
           
           if (querySnapshot.docs.length > 0) {
@@ -143,8 +147,9 @@ endpoints: (builder) => ({
               email: session.user.email,
               name: session.user.name || session.user.email.split('@')[0],
               avatar: session.user.image,
-              createdAt: now,
-              updatedAt: now,
+                      createdAt: now,
+                      updatedAt: now,
+                      isApproved: false,
             });
             
             const newUser = {
@@ -152,8 +157,9 @@ endpoints: (builder) => ({
               email: session.user.email,
               name: session.user.name || session.user.email.split('@')[0],
               avatar: session.user.image,
-              createdAt: now,
-              updatedAt: now,
+                      createdAt: now,
+                      updatedAt: now,
+                      isApproved: false,
             } as IUser;
             
                     if (process.env.NODE_ENV !== 'production') console.log('✅ getCurrentUser - created new user:', newUser);
@@ -258,7 +264,7 @@ endpoints: (builder) => ({
     }),
 
     // Boards endpoints
-    fetchBoards: builder.query<IBoard[], void>({
+            fetchBoards: builder.query<IBoard[], void>({
       async queryFn() {
         try {
           const session = await getSession();
@@ -268,14 +274,34 @@ endpoints: (builder) => ({
                     if (process.env.NODE_ENV !== 'production') console.log('❌ fetchBoards -', new Date().toISOString(), '- no session, returning empty array');
             return { data: [] };
           }
+          const userEmail = session.user.email as string;
           
-                  if (process.env.NODE_ENV !== 'production') console.log('🔍 fetchBoards -', new Date().toISOString(), '- user email:', session.user.email);
-          const ref = collection(db, "boards");
-          const q = query(ref, where("ownerId", "==", session.user.email));
+                  // Approval gate
+                  const usersRef = collection(db, 'users');
+          const uq = query(usersRef, where('email', '==', userEmail));
+                  const uSnap = await getDocs(uq);
+                  const userDoc = uSnap.docs[0]?.data() as IUser | undefined;
+                  if (!userDoc?.isApproved) {
+                    if (process.env.NODE_ENV !== 'production') console.log('⛔ Not approved; hiding boards');
+                    return { data: [] };
+                  }
+
+                  const ref = collection(db, "boards");
+          const q = query(ref, where("ownerId", "==", userEmail));
           const querySnapshot = await getDocs(q);
-          const boards = querySnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() } as IBoard));
-                  if (process.env.NODE_ENV !== 'production') console.log('✅ fetchBoards -', new Date().toISOString(), '- found boards:', boards);
-          return { data: boards };
+                  const ownedBoards = querySnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() } as IBoard));
+
+                  // Also include boards where user is in owners[] or members[]
+                  const allBoardsSnapshot = await getDocs(ref);
+                  const sharedBoards: IBoard[] = allBoardsSnapshot.docs
+                    .map(d => ({ id: d.id, ...d.data() } as IBoard))
+            .filter(b => (b.owners || []).includes(userEmail) || (b.members || []).includes(userEmail));
+
+                  const merged = [...ownedBoards];
+                  for (const b of sharedBoards) {
+                    if (!merged.find(x => x.id === b.id)) merged.push(b);
+                  }
+                  return { data: merged };
         } catch (e) {
           console.error('❌ fetchBoards -', new Date().toISOString(), '- error:', e);
           return { error: e };
@@ -284,19 +310,22 @@ endpoints: (builder) => ({
       providesTags: ["Boards"],
     }),
 
-    createBoard: builder.mutation({
-      async queryFn(boardData: Omit<IBoard, 'id' | 'createdAt' | 'updatedAt'>) {
+            createBoard: builder.mutation({
+              async queryFn(boardData: Omit<IBoard, 'id' | 'createdAt' | 'updatedAt'>) {
         try {
           const session = await getSession();
           if (!session?.user?.email) return { error: "No user session" };
           
           const now = new Date().toISOString();
-          const boardRef = await addDoc(collection(db, "boards"), {
-            ...boardData,
-            ownerId: session.user.email,
-            createdAt: now,
-            updatedAt: now,
-          });
+                  const payload = {
+                    ...boardData,
+                    ownerId: session.user.email,
+                    owners: Array.from(new Set([...(boardData.owners || []), session.user.email])),
+                    members: boardData.members || [],
+                    createdAt: now,
+                    updatedAt: now,
+                  } as Partial<IBoard>;
+                  const boardRef = await addDoc(collection(db, "boards"), payload);
           return { data: { id: boardRef.id } };
         } catch (e) {
           return { error: e };

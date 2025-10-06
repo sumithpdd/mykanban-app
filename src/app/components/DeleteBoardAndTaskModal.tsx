@@ -10,9 +10,11 @@ getDeleteBoardAndTaskModalStatus,
 getCurrentBoardName,
 } from "@/redux/features/appSlice";
 import {
-useFetchBoardsQuery,
+  useFetchBoardsQuery,
   useUpdateBoardMutation,
+  useDeleteBoardMutation,
 } from "@/redux/services/apiSlice";
+import { useSession } from 'next-auth/react';
 
 export default function DeleteBoardAndTaskModal() {
   //variable declarations, functions, JSX
@@ -26,6 +28,8 @@ export default function DeleteBoardAndTaskModal() {
   const taskStatus = useAppSelector(getDeleteBoardAndTaskModalStatus);
   let { data: boards } = useFetchBoardsQuery();
   const [updateBoard, { isLoading }] = useUpdateBoardMutation();
+  const [deleteBoard] = useDeleteBoardMutation();
+  const { data: session } = useSession();
 
   const handleDelete = (e: React.FormEvent<HTMLButtonElement>) => {
     e.preventDefault();
@@ -38,9 +42,13 @@ export default function DeleteBoardAndTaskModal() {
             (board: { name: string }) => board.name === currentBoardName
           );
           if (boardToDelete) {
-            // Use deleteBoard mutation here when implemented
-            // For now, we'll skip this as we don't have deleteBoard mutation exposed
-            if (process.env.NODE_ENV !== 'production') console.log("Delete board:", boardToDelete.id);
+            const email = session?.user?.email;
+            const canDelete = email && (boardToDelete.ownerId === email || (boardToDelete.owners || []).includes(email));
+            if (!canDelete) {
+              return;
+            }
+            deleteBoard(boardToDelete.id as any);
+            closeModal();
           }
         }
       } else {
@@ -89,12 +97,15 @@ export default function DeleteBoardAndTaskModal() {
           <div className="w-1/2">
             <button
               type="submit"
-              onClick={(e: React.FormEvent<HTMLButtonElement>) =>
-                handleDelete(e)
-              }
-              className="bg-red-500 rounded-3xl py-2 w-full text-sm font-bold"
+              onClick={(e: React.FormEvent<HTMLButtonElement>) => handleDelete(e)}
+              className={`rounded-3xl py-2 w-full text-sm font-bold ${(() => {
+                if (modalVariant !== 'Delete this board?') return 'bg-red-500';
+                const active = boards?.find((b: any) => b.name === currentBoardName);
+                const email = session?.user?.email;
+                const canDelete = active && email && (active.ownerId === email || (active.owners || []).includes(email));
+                return canDelete ? 'bg-red-500' : 'bg-stone-300 cursor-not-allowed';
+              })()}`}
             >
-              {" "}
               {isLoading ? "Loading" : "Delete"}
             </button>
           </div>

@@ -310,7 +310,7 @@ export default function AddOrEditTaskModal() {
           if (status === initialTaskColumn) {
             const updatedStatusColumn = {
               ...columns[getStatusColumnIndex],
-              tasks: columns[getStatusColumnIndex]?.tasks?.map(
+              tasks: (columns[getStatusColumnIndex]?.tasks || []).map(
                 (task: any, index: number) => {
                   if (index === currentTaskIndex) {
                     return taskData; // Use the full task data

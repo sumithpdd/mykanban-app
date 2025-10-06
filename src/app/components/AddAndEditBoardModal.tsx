@@ -13,7 +13,9 @@ import {
   useFetchBoardsQuery,
   useUpdateBoardMutation,
   useCreateBoardMutation,
+  useFetchUsersQuery,
 } from "@/redux/services/apiSlice";
+import { useSession } from 'next-auth/react';
 
 import { FaTimes } from "react-icons/fa";
 
@@ -65,6 +67,13 @@ let { data: boards } = useFetchBoardsQuery();
 const [updateBoard, { isLoading: isUpdating }] = useUpdateBoardMutation();
 const [createBoard, { isLoading: isCreating }] = useCreateBoardMutation();
 const isLoading = isUpdating || isCreating;
+// Owners/Members inputs
+const [ownersInput, setOwnersInput] = useState<string>("");
+const [membersInput, setMembersInput] = useState<string>("");
+const [ownersSet, setOwnersSet] = useState<Set<string>>(new Set());
+const [membersSet, setMembersSet] = useState<Set<string>>(new Set());
+const { data: users = [] } = useFetchUsersQuery();
+const { data: session } = useSession();
 
  // Effect to set initial data for the modal based on the variant
  useEffect(() => {
@@ -72,11 +81,26 @@ const isLoading = isUpdating || isCreating;
 
     if (isVariantAdd) {
       setBoardData(addBoardData);
+      setOwnersInput("");
+      setMembersInput("");
+      setOwnersSet(new Set());
+      setMembersSet(new Set());
     } else {
       const activeBoard = boards.find(
         (board: { name: string }) => board.name === currentBoardTitle
       );
       setBoardData(activeBoard);
+      if (activeBoard) {
+        // @ts-ignore
+        setOwnersInput(((activeBoard.owners) || []).join(", "));
+        // @ts-ignore
+        setMembersInput(((activeBoard.members) || []).join(", "));
+        // initialize sets
+        // @ts-ignore
+        setOwnersSet(new Set((activeBoard.owners) || []));
+        // @ts-ignore
+        setMembersSet(new Set((activeBoard.members) || []));
+      }
     }
   }
 }, [boards, modalVariant]);
@@ -166,12 +190,16 @@ const handleAddNewBoardToDb = (e: React.FormEvent<HTMLButtonElement>) => {
   if (boardData?.name !== "" && !emptyColumnStringChecker && boardData) {
     //submit to the database after verifying that the board name and none of the column names aren't empty
     if (boards) {
+      const owners = ownersSet.size > 0 ? Array.from(ownersSet) : ownersInput.split(',').map(s => s.trim()).filter(Boolean);
+      const members = membersSet.size > 0 ? Array.from(membersSet) : membersInput.split(',').map(s => s.trim()).filter(Boolean);
       createBoard({
         name: boardData.name,
         description: "",
         columns: boardData.columns as any,
-        ownerId: "", // Will be set automatically by the API
-      });
+        owners,
+        members,
+        ownerId: "", // set in API
+      } as any);
       closeModal();
     }
   }
@@ -201,11 +229,15 @@ const handleEditBoardToDb = (e: React.FormEvent<HTMLButtonElement>) => {
         (board: { name: string }) => board.name === currentBoardTitle
       );
       if (activeBoard) {
+        const owners = ownersSet.size > 0 ? Array.from(ownersSet) : ownersInput.split(',').map(s => s.trim()).filter(Boolean);
+        const members = membersSet.size > 0 ? Array.from(membersSet) : membersInput.split(',').map(s => s.trim()).filter(Boolean);
         updateBoard({
           boardId: activeBoard.id,
           boardData: {
             name: boardData.name,
             columns: boardData.columns as any,
+            owners,
+            members,
           }
         });
         closeModal();
@@ -244,6 +276,72 @@ return (
               ) : (
                 ""
               )}
+            </div>
+
+            {/* Owners & Members */}
+            <div className="grid grid-cols-2 gap-4 mt-4">
+              <div>
+                <label className="text-sm">Owners (emails)</label>
+                <div className="pt-2">
+                  <input
+                    className="border border-stone-200 focus:outline-none text-sm cursor-pointer w-full p-2 rounded"
+                    placeholder="owner1@example.com, owner2@example.com"
+                    value={ownersInput}
+                    onChange={(e) => setOwnersInput(e.target.value)}
+                  />
+                </div>
+                <p className="text-xs text-gray-500 mt-1">Creator is added automatically.</p>
+                {/* User list selection */}
+                <div className="mt-2 max-h-40 overflow-auto border border-stone-200 rounded p-2">
+                  {users.map((u: any) => {
+                    const checked = ownersSet.has(u.email);
+                    return (
+                      <label key={u.id} className="flex items-center gap-2 text-sm py-1">
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={(e) => {
+                            const set = new Set(ownersSet);
+                            if (e.target.checked) set.add(u.email); else set.delete(u.email);
+                            setOwnersSet(set);
+                          }}
+                        />
+                        <span>{u.name || u.email} <span className="text-xs text-gray-500">({u.email})</span></span>
+                      </label>
+                    );
+                  })}
+                </div>
+              </div>
+              <div>
+                <label className="text-sm">Members (emails)</label>
+                <div className="pt-2">
+                  <input
+                    className="border border-stone-200 focus:outline-none text-sm cursor-pointer w-full p-2 rounded"
+                    placeholder="member1@example.com, member2@example.com"
+                    value={membersInput}
+                    onChange={(e) => setMembersInput(e.target.value)}
+                  />
+                </div>
+                <div className="mt-2 max-h-40 overflow-auto border border-stone-200 rounded p-2">
+                  {users.map((u: any) => {
+                    const checked = membersSet.has(u.email);
+                    return (
+                      <label key={u.id} className="flex items-center gap-2 text-sm py-1">
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={(e) => {
+                            const set = new Set(membersSet);
+                            if (e.target.checked) set.add(u.email); else set.delete(u.email);
+                            setMembersSet(set);
+                          }}
+                        />
+                        <span>{u.name || u.email} <span className="text-xs text-gray-500">({u.email})</span></span>
+                      </label>
+                    );
+                  })}
+                </div>
+              </div>
             </div>
 
             <div className="mt-6">
@@ -300,11 +398,21 @@ return (
                 type="submit"
                 onClick={(e: React.FormEvent<HTMLButtonElement>) => {
                   // function to run depending on the variant of the modals
-                  isVariantAdd
-                    ? handleAddNewBoardToDb(e)
-                    : handleEditBoardToDb(e);
+                  const canEdit = !boards ? false : (() => {
+                    const active = boards.find((b: any) => b.name === currentBoardTitle);
+                    if (!active || isVariantAdd) return true;
+                    const email = session?.user?.email;
+                    return email && (active.ownerId === email || (active.owners || []).includes(email));
+                  })();
+                  if (!canEdit) return;
+                  isVariantAdd ? handleAddNewBoardToDb(e) : handleEditBoardToDb(e);
                 }}
-                className="bg-blue-500 rounded-3xl py-2 w-full text-sm font-bold"
+                className={`rounded-3xl py-2 w-full text-sm font-bold ${(() => {
+                  const active = boards?.find((b: any) => b.name === currentBoardTitle);
+                  const email = session?.user?.email;
+                  const canEdit = isVariantAdd || (active && email && (active.ownerId === email || (active.owners || []).includes(email)));
+                  return canEdit ? 'bg-blue-500' : 'bg-stone-300 cursor-not-allowed';
+                })()}`}
               >
                 {/* text to display depending on the variant of the modal */}
                 <p>
@@ -313,6 +421,12 @@ return (
                     : `${isVariantAdd ? "Create New Board" : "Save Changes"}`}
                 </p>
               </button>
+              {(!isVariantAdd && boards) && (() => {
+                const active = boards.find((b: any) => b.name === currentBoardTitle);
+                const email = session?.user?.email;
+                const canEdit = active && email && (active.ownerId === email || (active.owners || []).includes(email));
+                return !canEdit ? <p className="text-xs text-red-500 mt-2">Only an owner can edit or delete this board.</p> : null;
+              })()}
             </div>
           </div>
         </>

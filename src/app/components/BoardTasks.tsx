@@ -81,8 +81,11 @@ function SortableTask({
     });
   };
 
-  // Check if task is overdue
-  const isOverdue = task.dueDate && new Date(task.dueDate) < new Date();
+  // Completion and overdue logic
+  const statusLower = (task.status || '').toLowerCase();
+  const isCompletedStatus = statusLower.includes('complete') || statusLower === 'done';
+  const isCompleted = isCompletedStatus || !!task.completedDate;
+  const isOverdue = !!task.dueDate && !isCompleted && new Date(task.dueDate) < new Date();
 
   // Get task tags
   const taskTags = tags.filter(tag => task.tags.includes(tag.id));

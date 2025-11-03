@@ -1,5 +1,6 @@
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 import { RootState } from "../store";
+import type { IOKR } from "../services/apiSlice";
 
 const initialState = {
 currentBoardName: "",
@@ -8,6 +9,7 @@ isAddAndEditBoardModal: { isOpen: false, variant: "" },
 isAddAndEditTaskModal: { isOpen: false, variant: "", title: "", index: -1, name: ""},
 isDeleteBoardAndTaskModal: { isOpen: false, variant: "",  title:'', status: "", index: -1 },
 isTagManagementModal: { isOpen: false },
+isOKRModal: { isOpen: false, okrToEdit: null as IOKR | null },
 };
 
 export const features = createSlice({
@@ -69,6 +71,13 @@ openTagManagementModal: (state) => {
 closeTagManagementModal: (state) => {
   state.isTagManagementModal.isOpen = false;
 },
+// OKR modal actions
+setOKRModalOpen: (state, action: PayloadAction<boolean>) => {
+  state.isOKRModal.isOpen = action.payload;
+},
+setOKRToEdit: (state, action: PayloadAction<IOKR | null>) => {
+  state.isOKRModal.okrToEdit = action.payload;
+},
 },
 });
 export const {
@@ -81,7 +90,8 @@ openDeleteBoardAndTaskModal,
 closeDeleteBoardAndTaskModal,
 openTagManagementModal,
 closeTagManagementModal,
-
+setOKRModalOpen,
+setOKRToEdit,
 } = features.actions;
 
 export const getCurrentBoardName = (state: RootState) => state.features.currentBoardName;
@@ -110,6 +120,10 @@ export const getAddAndEditTaskModalName = (state: RootState) => state.features.i
 
 // Tag management modal selectors
 export const getTagManagementModalValue = (state: RootState) => state.features.isTagManagementModal.isOpen;
+
+// OKR modal selectors
+export const getOKRModalValue = (state: RootState) => state.features.isOKRModal.isOpen;
+export const getOKRToEdit = (state: RootState) => state.features.isOKRModal.okrToEdit;
 
 // Export the reducer for use in the Redux store
 export default features.reducer;

@@ -2,6 +2,7 @@
 
    import Dropdown from "./Dropdown";
    import { useState, useEffect } from 'react'
+   import { useRouter, usePathname } from 'next/navigation'
    // Import Redux functions and selectors for managing board names
    import { setCurrentBoardName, getCurrentBoardName, openAddAndEditTaskModal } from '@/redux/features/appSlice'
 import { useAppDispatch, useAppSelector } from '@/redux/hooks'
@@ -13,6 +14,8 @@ import { openTagManagementModal } from '@/redux/features/appSlice';
    export default function Navbar() {
     const [show, setShow] = useState<boolean>(false);
     const { data: session, status } = useSession();
+    const router = useRouter();
+    const pathname = usePathname();
     
    // Destructuring assignment to extract data from the useFetchBoardsQuery hook
    const { data: boards, isLoading, error } = useFetchBoardsQuery();
@@ -38,6 +41,8 @@ import { openTagManagementModal } from '@/redux/features/appSlice';
    // Select the current board name from the Redux store
    const currentBoardName = useAppSelector(getCurrentBoardName);
 
+   const isOKRPage = pathname === '/okrs';
+
    return (
     <nav className="bg-white border flex h-24">
       <div className="flex-none w-[18.75rem] border-r-2 flex items-center pl-[2.12rem]">
@@ -46,9 +51,36 @@ import { openTagManagementModal } from '@/redux/features/appSlice';
       
       {/* Main Content Area */}
       <div className="flex-1 flex items-center justify-between px-6">
-        {/* Board Name */}
-        <div className="flex items-center">
-          <p className="text-black text-2xl font-bold">{currentBoardName}</p>
+        {/* Navigation and Board Name */}
+        <div className="flex items-center space-x-6">
+          {/* Navigation Buttons */}
+          <div className="flex items-center space-x-2">
+            <button
+              onClick={() => router.push('/')}
+              className={`px-4 py-2 rounded-lg font-medium transition ${
+                !isOKRPage
+                  ? 'bg-blue-500 text-white'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              📋 Boards
+            </button>
+            <button
+              onClick={() => router.push('/okrs')}
+              className={`px-4 py-2 rounded-lg font-medium transition ${
+                isOKRPage
+                  ? 'bg-blue-500 text-white'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              🎯 OKRs
+            </button>
+          </div>
+          
+          {/* Board Name (only show on board page) */}
+          {!isOKRPage && (
+            <p className="text-black text-2xl font-bold">{currentBoardName}</p>
+          )}
         </div>
         
         {/* Right Side - Login Info and Actions */}

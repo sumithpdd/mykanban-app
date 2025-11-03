@@ -70,6 +70,7 @@ export interface ITask {
   tags: string[]; // Array of tag IDs
   assignedTo: string[]; // Array of user IDs
   dueDate?: string;
+  startDate?: string; // Start date for the task
   createdAt: string;
   createdBy?: string;
   updatedAt: string;
@@ -79,6 +80,9 @@ export interface ITask {
   timeEstimate?: number;
   checklistItems?: IChecklistItem[]; // Array of checklist items
   notes?: string; // plain text short notes
+  okrId?: string; // Optional link to an OKR
+  keyResultId?: string; // Optional link to a specific key result within an OKR
+  progress?: number; // Progress percentage (0-100) for tasks linked to key results
 }
 
 export interface IColumn {
@@ -99,10 +103,47 @@ export interface IBoard {
   updatedAt: string;
 }
 
+export interface IKeyResult {
+  id: string;
+  text: string;
+  completed: boolean;
+  targetValue?: string; // e.g., "75%", "10 assessments", "2 workshops"
+  currentValue?: string; // current progress value
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface IOKR {
+  id: string;
+  ownerId: string; // user email who owns this OKR
+  objective: string; // The objective title
+  keyResults: IKeyResult[]; // 2-4 measurable key results
+  status: 'Not Started' | 'In Progress' | 'Completed' | 'Needs Revision';
+  category: string[]; // Array of categories like "General Business OKR FY26", "Required AI OKR FY26"
+  progress: number; // 0-100 percentage
+  startDate?: string;
+  endDate?: string;
+  notes?: string;
+  archived: boolean; // For archived objectives
+  isOrganizational: boolean; // For organization objectives
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ICategory {
+  id: string;
+  name: string;
+  description?: string;
+  color: string; // Hex color code
+  isDefault: boolean; // Whether this is a default/system category
+  createdAt: string;
+  updatedAt: string;
+}
+
 export const fireStoreApi = createApi({
   reducerPath: "firestoreApi",
   baseQuery: fakeBaseQuery(),
-  tagTypes: ["Users", "Boards", "Tasks", "Tags"],
+  tagTypes: ["Users", "Boards", "Tasks", "Tags", "OKRs", "Categories"],
 endpoints: (builder) => ({
             // Users endpoints
     fetchUsers: builder.query<IUser[], void>({
@@ -562,8 +603,153 @@ endpoints: (builder) => ({
         }
       },
       invalidatesTags: ["Boards"],
- }),
-}),
+    }),
+
+    // OKR endpoints
+    fetchOKRs: builder.query<IOKR[], void>({
+      async queryFn() {
+        try {
+          const session = await getSession();
+          if (!session?.user?.email) {
+            return { data: [] };
+          }
+          const userEmail = session.user.email as string;
+          
+          const ref = collection(db, "okrs");
+          const q = query(ref, where("ownerId", "==", userEmail), orderBy("createdAt", "desc"));
+          const querySnapshot = await getDocs(q);
+          return { data: querySnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() } as IOKR)) };
+        } catch (e) {
+          console.error('❌ fetchOKRs - error:', e);
+          return { error: e };
+        }
+      },
+      providesTags: ["OKRs"],
+    }),
+
+    createOKR: builder.mutation({
+      async queryFn(okrData: Omit<IOKR, 'id' | 'createdAt' | 'updatedAt'>) {
+        try {
+          const session = await getSession();
+          if (!session?.user?.email) return { error: "No user session" };
+          
+          const now = new Date().toISOString();
+          const okrRef = await addDoc(collection(db, "okrs"), {
+            ...okrData,
+            ownerId: session.user.email,
+            createdAt: now,
+            updatedAt: now,
+          });
+          return { data: { id: okrRef.id } };
+        } catch (e) {
+          console.error('❌ createOKR - error:', e);
+          return { error: e };
+        }
+      },
+      invalidatesTags: ["OKRs"],
+    }),
+
+    updateOKR: builder.mutation({
+      async queryFn({ okrId, okrData }: { okrId: string; okrData: Partial<IOKR> }) {
+        try {
+          const cleanOKRData = cleanData(okrData);
+          await updateDoc(doc(db, "okrs", okrId), {
+            ...cleanOKRData,
+            updatedAt: new Date().toISOString(),
+          });
+          return { data: null };
+        } catch (e) {
+          console.error('❌ updateOKR - error:', e);
+          return { error: e };
+        }
+      },
+      invalidatesTags: ["OKRs"],
+    }),
+
+    deleteOKR: builder.mutation({
+      async queryFn(okrId: string) {
+        try {
+          await deleteDoc(doc(db, "okrs", okrId));
+          return { data: null };
+        } catch (e) {
+          console.error('❌ deleteOKR - error:', e);
+          return { error: e };
+        }
+      },
+      invalidatesTags: ["OKRs"],
+    }),
+
+    // ============================================================
+    // Category endpoints
+    // ============================================================
+    
+    fetchCategories: builder.query<ICategory[], void>({
+      async queryFn() {
+        try {
+          const ref = collection(db, "categories");
+          const querySnapshot = await getDocs(ref);
+          const categories = querySnapshot.docs.map((doc) => ({ 
+            id: doc.id, 
+            ...doc.data() 
+          } as ICategory));
+          
+          // Sort by isDefault first, then by name
+          categories.sort((a, b) => {
+            if (a.isDefault && !b.isDefault) return -1;
+            if (!a.isDefault && b.isDefault) return 1;
+            return a.name.localeCompare(b.name);
+          });
+          
+          return { data: categories };
+        } catch (e) {
+          console.error('❌ fetchCategories - error:', e);
+          return { error: e };
+        }
+      },
+      providesTags: ["Categories"],
+    }),
+
+    createCategory: builder.mutation({
+      async queryFn(category: Omit<ICategory, 'id'>) {
+        try {
+          const ref = collection(db, "categories");
+          const docRef = await addDoc(ref, cleanData(category));
+          return { data: { id: docRef.id, ...category } as ICategory };
+        } catch (e) {
+          console.error('❌ createCategory - error:', e);
+          return { error: e };
+        }
+      },
+      invalidatesTags: ["Categories"],
+    }),
+
+    updateCategory: builder.mutation({
+      async queryFn({ id, ...updates }: Partial<ICategory> & { id: string }) {
+        try {
+          const docRef = doc(db, "categories", id);
+          await updateDoc(docRef, cleanData(updates));
+          return { data: null };
+        } catch (e) {
+          console.error('❌ updateCategory - error:', e);
+          return { error: e };
+        }
+      },
+      invalidatesTags: ["Categories"],
+    }),
+
+    deleteCategory: builder.mutation({
+      async queryFn(categoryId: string) {
+        try {
+          await deleteDoc(doc(db, "categories", categoryId));
+          return { data: null };
+        } catch (e) {
+          console.error('❌ deleteCategory - error:', e);
+          return { error: e };
+        }
+      },
+      invalidatesTags: ["Categories"],
+    }),
+  }),
 });
 
 // Export hooks for using the created endpoints
@@ -583,4 +769,12 @@ export const {
   useAddTaskMutation,
   useUpdateTaskMutation,
   useMoveTaskMutation,
+  useFetchOKRsQuery,
+  useCreateOKRMutation,
+  useUpdateOKRMutation,
+  useDeleteOKRMutation,
+  useFetchCategoriesQuery,
+  useCreateCategoryMutation,
+  useUpdateCategoryMutation,
+  useDeleteCategoryMutation,
 } = fireStoreApi;

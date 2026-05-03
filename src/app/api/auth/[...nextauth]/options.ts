@@ -9,7 +9,7 @@ export const options: NextAuthOptions = {
     }),
   ],
   secret: process.env.NEXTAUTH_SECRET,
-  debug: true,
+  debug: process.env.NEXTAUTH_DEBUG === "true",
   pages: {
     signIn: '/api/auth/signin',
     signOut: '/api/auth/signout',

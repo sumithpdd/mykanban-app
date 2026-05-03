@@ -25,7 +25,7 @@ export default function DeleteOKRModal({ isOpen, okr, onClose }: DeleteOKRModalP
   if (!okr) return null;
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose}>
+    <Modal isOpen={isOpen} onRequestClose={onClose}>
       <ModalBody>
         <div className="w-full max-w-md bg-white rounded-lg p-6">
           {/* Header */}

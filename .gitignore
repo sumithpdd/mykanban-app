@@ -46,3 +46,4 @@ firebase-debug.log
 .firebase/
 .github/
 serviceAccountKey.json
+data-migration/seed-okrs-real.js

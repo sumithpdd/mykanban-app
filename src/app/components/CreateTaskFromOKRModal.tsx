@@ -65,6 +65,7 @@ export default function CreateTaskFromOKRModal({ isOpen, okr, onClose }: CreateT
           okrId: okr.id,
           keyResultId: taskData.selectedKeyResult || undefined,
           progress: 0,
+          order: 0, // Will be set by the backend based on column
         },
       }).unwrap();
 
@@ -89,7 +90,7 @@ export default function CreateTaskFromOKRModal({ isOpen, okr, onClose }: CreateT
   const selectedBoard = boards.find((b) => b.id === taskData.boardId);
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose}>
+    <Modal isOpen={isOpen} onRequestClose={onClose}>
       <ModalBody>
         <div className="w-full max-w-2xl bg-white rounded-lg p-6 max-h-[90vh] overflow-y-auto">
           {/* Header */}
